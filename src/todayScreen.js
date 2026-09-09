@@ -62,6 +62,19 @@ function dueColor(ngayDenHan) {
   return 'due-red';
 }
 
+// Gom "Định kỳ/Tần suất" (chữ tự do, rất nhiều biến thể trong danh mục gốc)
+// về 1 nhóm nhỏ, gọn để lọc nhanh — không cố phân tích chính xác từng câu.
+function freqBucket(text) {
+  const t = (text || '').toLowerCase();
+  if (t.includes('ngày')) return 'Hàng ngày';
+  if (t.includes('tuần')) return 'Hàng tuần';
+  if (t.includes('tháng')) return 'Hàng tháng';
+  if (t.includes('quý')) return 'Hàng quý';
+  if (t.includes('năm')) return 'Hàng năm';
+  return 'Khác';
+}
+const FREQ_ORDER = ['Hàng ngày', 'Hàng tuần', 'Hàng tháng', 'Hàng quý', 'Hàng năm', 'Khác'];
+
 function renderShell(app, data, onLogout) {
   window.__qlnb_onLogout = onLogout;
   const body = app.querySelector('#today-body');
@@ -72,6 +85,9 @@ function renderShell(app, data, onLogout) {
   const notStarted = catalog.filter((i) => !i.done_today);
   const hangNgay = notStarted.filter((i) => /ngày/i.test(i.dinh_ky_tan_suat || ''));
   const khac = notStarted.filter((i) => !/ngày/i.test(i.dinh_ky_tan_suat || ''));
+
+  const nhomList = [...new Set(notStarted.map((i) => i.nhom_nv).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+  const freqList = FREQ_ORDER.filter((f) => notStarted.some((i) => freqBucket(i.dinh_ky_tan_suat) === f));
 
   body.innerHTML = `
     <div class="fixed-controls">
@@ -85,6 +101,16 @@ function renderShell(app, data, onLogout) {
         ${iconSearch}
         <input id="task-search" type="text" placeholder="Tìm việc theo tên hoặc mã…" />
       </div>
+      ${nhomList.length > 1 ? `
+      <div class="chip-row" id="filter-nhom">
+        <button type="button" class="chip active" data-nhom="">Tất cả</button>
+        ${nhomList.map((n) => `<button type="button" class="chip" data-nhom="${esc(n)}">${esc(n)}</button>`).join('')}
+      </div>` : ''}
+      ${freqList.length > 1 ? `
+      <div class="chip-row" id="filter-freq">
+        <button type="button" class="chip active" data-freq="">Tất cả</button>
+        ${freqList.map((f) => `<button type="button" class="chip" data-freq="${esc(f)}">${esc(f)}</button>`).join('')}
+      </div>` : ''}
     </div>
 
     <div class="list-scroll" id="list-scroll">
@@ -93,8 +119,8 @@ function renderShell(app, data, onLogout) {
       ${notStarted.length === 0 && inProgress.length === 0 && doneToday.length === 0 ? `
         <div class="empty-msg">Chưa có việc nào trong danh mục — liên hệ Trưởng/Phó phòng để bổ sung.</div>
       ` : ''}
-      ${hangNgay.length ? `<div class="group-label">Việc hàng ngày</div>${hangNgay.map(catalogHtml).join('')}` : ''}
-      ${khac.length ? `<div class="group-label">Việc khác — tìm để bắt đầu khi phát sinh</div>${khac.map(catalogHtml).join('')}` : ''}
+      ${hangNgay.length ? `<div class="group-label" data-group="hang-ngay">Việc hàng ngày</div>${hangNgay.map(catalogHtml).join('')}` : ''}
+      ${khac.length ? `<div class="group-label" data-group="khac">Việc khác — tìm để bắt đầu khi phát sinh</div>${khac.map(catalogHtml).join('')}` : ''}
     </div>
 
     <div class="save-bar" id="save-bar" hidden>
@@ -102,17 +128,7 @@ function renderShell(app, data, onLogout) {
     </div>
   `;
 
-  const searchInput = body.querySelector('#task-search');
-  searchInput.addEventListener('input', () => {
-    const q = searchInput.value.trim().toLowerCase();
-    body.querySelectorAll('[data-search]').forEach((el) => {
-      const hay = el.dataset.search || '';
-      el.style.display = !q || hay.includes(q) ? '' : 'none';
-    });
-    body.querySelectorAll('.group-label').forEach((el) => {
-      el.style.display = q ? 'none' : '';
-    });
-  });
+  wireCatalogFilters(body);
 
   wireCatalogTaps(body);
   wireInProgressCards(body);
@@ -120,12 +136,58 @@ function renderShell(app, data, onLogout) {
   updateSaveBar(app, onLogout);
 }
 
+// ---------- Ô tìm kiếm + 2 hàng chip lọc (Nhóm CV / Định kỳ-tần suất) ----------
+// Chỉ áp dụng cho khu vực danh mục "chưa bắt đầu" (data-job-id) — Đang thực
+// hiện/Đã kết thúc hôm nay giữ nguyên, không lọc theo 2 tiêu chí này.
+
+function wireCatalogFilters(body) {
+  const searchInput = body.querySelector('#task-search');
+  const nhomRow = body.querySelector('#filter-nhom');
+  const freqRow = body.querySelector('#filter-freq');
+
+  function applyFilters() {
+    const q = searchInput.value.trim().toLowerCase();
+    const nhom = nhomRow?.querySelector('.chip.active')?.dataset.nhom || '';
+    const freq = freqRow?.querySelector('.chip.active')?.dataset.freq || '';
+
+    body.querySelectorAll('.task[data-job-id]').forEach((el) => {
+      const matchSearch = !q || (el.dataset.search || '').includes(q);
+      const matchNhom = !nhom || el.dataset.nhom === nhom;
+      const matchFreq = !freq || el.dataset.freq === freq;
+      el.style.display = matchSearch && matchNhom && matchFreq ? '' : 'none';
+    });
+
+    body.querySelectorAll('.group-label[data-group]').forEach((label) => {
+      let sib = label.nextElementSibling;
+      let anyVisible = false;
+      while (sib && !sib.classList.contains('group-label')) {
+        if (sib.style.display !== 'none') anyVisible = true;
+        sib = sib.nextElementSibling;
+      }
+      label.style.display = anyVisible ? '' : 'none';
+    });
+  }
+
+  searchInput.addEventListener('input', applyFilters);
+
+  [nhomRow, freqRow].forEach((row) => {
+    if (!row) return;
+    row.querySelectorAll('.chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        row.querySelectorAll('.chip').forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        applyFilters();
+      });
+    });
+  });
+}
+
 // ---------- Render từng loại dòng ----------
 
 function catalogHtml(item) {
   const search = `${item.ten_cong_viec} ${item.ma_cv}`.toLowerCase();
   return `
-    <div class="task" data-job-id="${item.job_catalog_id}" data-search="${esc(search)}">
+    <div class="task" data-job-id="${item.job_catalog_id}" data-search="${esc(search)}" data-nhom="${esc(item.nhom_nv || '')}" data-freq="${esc(freqBucket(item.dinh_ky_tan_suat))}">
       <div class="box">${iconCheck}</div>
       <div class="t">
         <div class="title">${esc(item.ten_cong_viec)}</div>
