@@ -8,7 +8,7 @@ import { iconCheck, iconSearch, iconLogout } from './icons.js';
 let staged = null;
 function resetStaged() {
   staged = {
-    starts: new Map(),      // job_catalog_id -> { finishNow: bool }
+    starts: new Set(),      // job_catalog_id — Số lượng/Kết thúc luôn đọc trực tiếp từ DOM lúc Lưu
     finish: new Set(),      // daily_log_id
     cancel: new Set(),      // daily_log_id
     unfinish: new Set(),    // daily_log_id (đang done_today, sẽ mở lại)
@@ -134,9 +134,12 @@ function catalogHtml(item) {
           <span class="val">${fmtDiem(item.gia_tri_cv)}đ</span>
           <span class="freq">${esc(item.dinh_ky_tan_suat || '')}</span>
         </div>
-        <label class="finish-now-toggle" hidden>
-          <input type="checkbox" class="chk-finish-now" /> Kết thúc luôn (xong trong hôm nay)
-        </label>
+        <div class="quick-finish-row">
+          <label class="qty-inline">SL <input type="number" min="1" class="chk-so-luong" value="1" /></label>
+          <label class="finish-now-toggle">
+            <input type="checkbox" class="chk-finish-now" /> Kết thúc luôn (xong hôm nay)
+          </label>
+        </div>
       </div>
     </div>
   `;
@@ -182,28 +185,33 @@ function inProgressHtml(item) {
 
 function wireCatalogTaps(body) {
   body.querySelectorAll('.task[data-job-id]').forEach((el) => {
+    const jobId = el.dataset.jobId;
+
     el.addEventListener('click', (e) => {
-      if (e.target.closest('.finish-now-toggle')) return; // không toggle staged khi bấm vào checkbox con
-      const jobId = el.dataset.jobId;
-      const toggle = el.querySelector('.finish-now-toggle');
+      if (e.target.closest('.quick-finish-row')) return; // bấm vào ô SL/checkbox không toggle theo dòng
       if (staged.starts.has(jobId)) {
         staged.starts.delete(jobId);
         el.classList.remove('staged');
-        toggle.hidden = true;
       } else {
-        staged.starts.set(jobId, { finishNow: false });
+        staged.starts.add(jobId);
         el.classList.add('staged');
-        toggle.hidden = false;
       }
       refreshSaveBarFromDom(el);
     });
-  });
-  body.querySelectorAll('.chk-finish-now').forEach((chk) => {
-    chk.addEventListener('change', () => {
-      const jobId = chk.closest('.task').dataset.jobId;
-      const entry = staged.starts.get(jobId);
-      if (entry) entry.finishNow = chk.checked;
-      refreshSaveBarFromDom(chk);
+
+    // Bấm vào ô Số lượng không được làm toggle cả dòng.
+    el.querySelector('.chk-so-luong').addEventListener('click', (e) => e.stopPropagation());
+
+    // Tích "Kết thúc luôn" tự tích luôn cả Bắt đầu (không cần bấm dòng trước) —
+    // Ngày bắt đầu luôn = hôm nay cho trường hợp này (mặc định của start_task).
+    // Bỏ tích lại KHÔNG tự bỏ tích Bắt đầu, chỉ tắt phần "kết thúc ngay".
+    el.querySelector('.chk-finish-now').addEventListener('change', (e) => {
+      e.stopPropagation();
+      if (e.target.checked && !staged.starts.has(jobId)) {
+        staged.starts.add(jobId);
+        el.classList.add('staged');
+      }
+      refreshSaveBarFromDom(el);
     });
   });
 }
@@ -360,11 +368,16 @@ async function saveChanges(app, onLogout) {
     catch (err) { errors.push(err.message); }
   }
 
-  // 4) Bắt đầu các việc mới được tích trong danh mục — nếu có tích "Kết thúc luôn" thì kết thúc ngay sau đó.
-  for (const [jobId, opts] of staged.starts) {
+  // 4) Bắt đầu các việc mới được tích trong danh mục (Ngày bắt đầu = hôm nay,
+  // Số lượng đọc trực tiếp từ ô nhập trên dòng) — nếu có tích "Kết thúc luôn"
+  // thì kết thúc ngay sau đó.
+  for (const jobId of staged.starts) {
+    const row = body.querySelector(`.task[data-job-id="${jobId}"]`);
+    const soLuong = parseInt(row?.querySelector('.chk-so-luong')?.value, 10) || 1;
+    const finishNow = row?.querySelector('.chk-finish-now')?.checked || false;
     try {
-      const res = await callAuthedRpc('start_task', { p_job_catalog_id: jobId });
-      if (opts.finishNow) {
+      const res = await callAuthedRpc('start_task', { p_job_catalog_id: jobId, p_so_luong: soLuong });
+      if (finishNow) {
         await callAuthedRpc('finish_task', { p_daily_log_id: res.daily_log_id, p_ngay_ket_thuc: today });
       }
     } catch (err) { errors.push(err.message); }

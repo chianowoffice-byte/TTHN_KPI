@@ -169,7 +169,13 @@ button, input { font-family: inherit; }
 .task.staged { box-shadow: 0 0 0 2px var(--accent) inset; background: var(--accent-soft); }
 .task.staged .box { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .task.staged .box svg { opacity: 1; transform: scale(1); }
-.finish-now-toggle { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; color: var(--ink-dim); }
+.quick-finish-row { display: flex; align-items: center; gap: 12px; margin-top: 7px; flex-wrap: wrap; }
+.qty-inline { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink-dim); }
+.qty-inline input {
+  width: 46px; border: 1.2px solid var(--border); border-radius: 7px; padding: 3px 5px;
+  font-size: 12px; background: var(--surface); color: var(--ink);
+}
+.finish-now-toggle { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-dim); }
 .finish-now-toggle input { margin: 0; }
 
 /* Việc đã kết thúc hôm nay, tích để bỏ Kết thúc (chờ Lưu) */
