@@ -419,7 +419,10 @@ begin
   if v_locked and my_role() <> 'truong_phong' then
     raise exception 'Quý %/% của cán bộ này đã được Trưởng phòng chốt — chỉ Trưởng phòng mới sửa được.', v_quy, v_nam;
   end if;
-  return new;
+  -- QUAN TRỌNG: 'new' luôn NULL khi trigger chạy cho DELETE — trả thẳng 'new'
+  -- trong trường hợp đó khiến Postgres ÂM THẦM HUỶ lệnh xoá (không báo lỗi).
+  -- Phải trả coalesce(new, old) để DELETE vẫn thực hiện bình thường.
+  return coalesce(new, old);
 end;
 $$;
 
