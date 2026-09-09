@@ -53,11 +53,21 @@ from (values
 join employees m on m.ma_cbnv = map.ma_cbnv_quan_ly
 where e.ma_cbnv = map.ma_cbnv;
 
+-- Bước 3: tạo tài khoản đăng nhập cho cả 12 người — mật khẩu mặc định 123456,
+-- băm bằng pgcrypto (KHÔNG lưu thô), bắt đổi mật khẩu ở lần đăng nhập đầu.
+-- Chạy lại an toàn — không tạo trùng tài khoản cho người đã có.
+insert into accounts (employee_id, mat_khau_hash, must_change_password)
+select e.id, crypt('123456', gen_salt('bf')), true
+from employees e
+where e.department_id = (select id from departments where ma_phong = 'QLNB')
+on conflict (employee_id) do nothing;
+
 -- ⚠️ CẦN LÀM THÊM SAU KHI CHẠY FILE NÀY (không tự động được vì cần thông tin
 -- ngoài phạm vi phòng QLNB):
 --   1. Thêm tài khoản Ban Giám đốc — chèn 1 dòng employees với app_role =
---      'ban_giam_doc', department_id = NULL (xem toàn chi nhánh), rồi tạo tài
---      khoản đăng nhập tương ứng bằng scripts/tao-tai-khoan-dang-nhap.mjs.
+--      'ban_giam_doc', department_id = NULL (xem toàn chi nhánh), rồi tạo 1
+--      dòng accounts tương ứng (copy đúng mẫu insert ở Bước 3, đổi where
+--      thành e.ma_cbnv = '<mã CBNV của người đó>').
 --   2. Vũ Thị Lệ (Trưởng phòng) hiện CHƯA có danh mục công việc — file gốc
 --      không có catalog riêng cho vị trí Trưởng phòng. Cần xây dựng bổ sung
 --      (theo đúng công thức a×0.4+b×0.5+c×0.1) rồi insert vào job_catalog.

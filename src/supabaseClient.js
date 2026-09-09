@@ -1,15 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Không dùng Supabase Auth (xem sql/01-schema-va-rls.sql) — client này chỉ
+// dùng để gọi các hàm RPC (supabase.rpc(...)) bằng anon key. Không bật session
+// tự động của thư viện vì ta tự quản lý "vé" (token) trong bảng login_sessions.
 export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  { auth: { persistSession: false } }
 );
-
-// App cho đăng nhập bằng "mã CBNV" (vd 00146999) thay vì email — Supabase Auth
-// vẫn cần một email nội bộ để xác thực, nên ghép mã CBNV với hậu tố cố định.
-// Hậu tố lấy từ .env (VITE_AUTH_EMAIL_SUFFIX) để đổi được mà không sửa code.
-const EMAIL_SUFFIX = import.meta.env.VITE_AUTH_EMAIL_SUFFIX || '@qlnb.noibo';
-
-export function maCBNVToEmail(maCBNV) {
-  return `${maCBNV.trim()}${EMAIL_SUFFIX}`;
-}

@@ -6,9 +6,16 @@
 -- chấm KPI Quý": Giá trị CV = (a)x0.4 + (b)x0.5 + (c)x0.1; KPI quý = Tài chính
 -- 10% + Quy trình 70% (Tiến độ 25% + Chất lượng 30% + Số lượng 15%) +
 -- Khách hàng nội bộ 15% + Học hỏi&Phát triển 5% ± điểm cộng/trừ.
+--
+-- MÔ HÌNH ĐĂNG NHẬP: tự xây bảng tài khoản riêng (accounts), KHÔNG dùng
+-- Supabase Auth. Vì vậy Postgres không tự biết "ai đang gọi" (không có
+-- auth.uid()) — toàn bộ dữ liệu bị KHOÁ CỨNG với người dùng thường (REVOKE),
+-- chỉ truy cập được qua các hàm RPC (security definer) tự kiểm tra "vé"
+-- (login_sessions.token) rồi mới cho đọc/ghi. Đây là ranh giới bảo mật duy
+-- nhất của hệ thống — mọi RPC mới thêm sau này đều phải theo đúng khuôn này.
 -- ============================================================================
 
-create extension if not exists pgcrypto; -- cho gen_random_uuid()
+create extension if not exists pgcrypto; -- cho gen_random_uuid() và crypt()/gen_salt() băm mật khẩu
 
 -- ---------------------------------------------------------------------------
 -- 1. DEPARTMENTS — phòng ban. Giai đoạn 1 chỉ có QLNB, mở rộng bằng cách
@@ -22,14 +29,12 @@ create table departments (
 );
 
 -- ---------------------------------------------------------------------------
--- 2. EMPLOYEES — thay Sheet '1_Danh sach CBNV'.
---    auth_user_id nối sang auth.users sau khi tạo tài khoản đăng nhập (mã CBNV
---    + mật khẩu mặc định 123456, ghép email giả <ma_cbnv>@qlnb.noibo — xem
---    scripts/tao-tai-khoan-dang-nhap.mjs).
+-- 2. EMPLOYEES — thay Sheet '1_Danh sach CBNV'. Không còn cột nối sang
+--    auth.users (không dùng Supabase Auth) — tài khoản đăng nhập nằm ở bảng
+--    accounts riêng, nối qua employee_id.
 -- ---------------------------------------------------------------------------
 create table employees (
   id                      uuid primary key default gen_random_uuid(),
-  auth_user_id            uuid unique references auth.users(id),
   ma_cbnv                 text unique not null,
   ho_ten                  text not null,
   chuc_danh               text,
@@ -39,13 +44,42 @@ create table employees (
   app_role                text not null default 'canbo'
                           check (app_role in ('canbo','pho_truong_phong','truong_phong','ban_giam_doc')),
   kpi_phu_luc             text,              -- vd 'KPI-CNH-QLNB2 (Chuyên viên TCNS)'
-  must_change_password    boolean not null default true,
   active                  boolean not null default true,
   created_at              timestamptz not null default now()
 );
 
 -- ---------------------------------------------------------------------------
--- 3. JOB_CATALOG — thay Sheet '2_Danh muc CV'. Mỗi cán bộ một danh mục riêng,
+-- 3. ACCOUNTS — tài khoản đăng nhập, mã CBNV + mật khẩu (đã băm bằng
+--    pgcrypto's crypt()/blowfish — KHÔNG BAO GIỜ lưu mật khẩu thô hay có thể
+--    đảo ngược lại). Khoá tạm 15 phút sau 5 lần sai liên tiếp.
+-- ---------------------------------------------------------------------------
+create table accounts (
+  id                      uuid primary key default gen_random_uuid(),
+  employee_id             uuid not null unique references employees(id) on delete cascade,
+  mat_khau_hash           text not null,
+  must_change_password    boolean not null default true,
+  failed_attempts         int not null default 0,
+  locked_until            timestamptz,
+  created_at              timestamptz not null default now(),
+  updated_at              timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
+-- 4. LOGIN_SESSIONS — "vé" cấp sau khi đăng nhập đúng. App lưu token này
+--    (localStorage) và gửi kèm mọi lệnh gọi RPC tiếp theo.
+-- ---------------------------------------------------------------------------
+create table login_sessions (
+  token         uuid primary key default gen_random_uuid(),
+  employee_id   uuid not null references employees(id) on delete cascade,
+  created_at    timestamptz not null default now(),
+  expires_at    timestamptz not null default (now() + interval '30 days'),
+  revoked       boolean not null default false
+);
+
+create index idx_login_sessions_employee on login_sessions (employee_id) where not revoked;
+
+-- ---------------------------------------------------------------------------
+-- 5. JOB_CATALOG — thay Sheet '2_Danh muc CV'. Mỗi cán bộ một danh mục riêng,
 --    nhập 1 lần lúc triển khai, ít khi đổi. Giá trị CV tính tự động bằng cột
 --    generated, đúng công thức gốc — không cho sai lệch tay.
 -- ---------------------------------------------------------------------------
@@ -70,7 +104,7 @@ create table job_catalog (
 );
 
 -- ---------------------------------------------------------------------------
--- 4. DAILY_LOG — thay Sheet '3_Nhat ky CV ngay'. Mỗi lượt tích = 1 dòng.
+-- 6. DAILY_LOG — thay Sheet '3_Nhat ky CV ngay'. Mỗi lượt tích = 1 dòng.
 --    gia_tri_cv_snapshot chốt tại thời điểm ghi (không đổi ngược nếu sau này
 --    job_catalog được sửa giá trị). is_ghi_bu tự tính để hiện nhãn minh bạch.
 -- ---------------------------------------------------------------------------
@@ -97,7 +131,7 @@ create table daily_log (
 create index idx_daily_log_employee_date on daily_log (employee_id, ngay_hoan_thanh_thuc_te);
 
 -- ---------------------------------------------------------------------------
--- 5. KPI_QUARTER — thay Sheet '4_Tong hop Quy' + '5_Cham KPI Quy'.
+-- 7. KPI_QUARTER — thay Sheet '4_Tong hop Quy' + '5_Cham KPI Quy'.
 --    so_cv_ke_hoach + 4 chỉ tiêu còn lại nhập tay cuối quý; %Tiến độ/%Chất
 --    lượng/%Số lượng cộng dồn tự động từ daily_log qua view v_kpi_quarter.
 -- ---------------------------------------------------------------------------
@@ -121,7 +155,7 @@ create table kpi_quarter (
 );
 
 -- ---------------------------------------------------------------------------
--- 6. SATISFACTION_SURVEY — thay Sheet '6_Mau do SHL'.
+-- 8. SATISFACTION_SURVEY — thay Sheet '6_Mau do SHL'.
 -- ---------------------------------------------------------------------------
 create table satisfaction_survey (
   id                              uuid primary key default gen_random_uuid(),
@@ -136,7 +170,32 @@ create table satisfaction_survey (
 );
 
 -- ============================================================================
--- VIEWS — cộng dồn tự động (thay công thức SUMIFS trong Excel)
+-- KHOÁ CỨNG MỌI BẢNG — không cấp quyền gì cho anon/authenticated. Đây là điểm
+-- khác biệt quan trọng nhất so với dùng Supabase Auth: vì không có auth.uid(),
+-- Row Level Security không có gì để đối chiếu, nên phải chặn truy cập bảng
+-- trực tiếp hoàn toàn và bắt buộc đi qua RPC. RLS bên dưới bật thêm cho chắc
+-- (phòng khi lỡ tay cấp quyền lại sau này), nhưng REVOKE mới là lớp chặn thật.
+-- ============================================================================
+
+revoke all on departments, employees, accounts, login_sessions, job_catalog, daily_log, kpi_quarter, satisfaction_survey
+  from anon, authenticated;
+
+alter table departments enable row level security;
+alter table employees enable row level security;
+alter table accounts enable row level security;
+alter table login_sessions enable row level security;
+alter table job_catalog enable row level security;
+alter table daily_log enable row level security;
+alter table kpi_quarter enable row level security;
+alter table satisfaction_survey enable row level security;
+-- Không tạo policy nào cả — RLS bật + không có policy = từ chối mọi truy vấn.
+-- Chỉ các hàm "security definer" bên dưới (chạy với quyền chủ sở hữu, bỏ qua
+-- RLS) mới đọc/ghi được các bảng này.
+
+-- ============================================================================
+-- VIEWS — cộng dồn tự động (thay công thức SUMIFS trong Excel). Views KHÔNG
+-- được cấp quyền trực tiếp (theo REVOKE ở trên) — các RPC đọc dữ liệu quý sẽ
+-- SELECT từ view này ở bên trong, client không SELECT thẳng được.
 -- ============================================================================
 
 create or replace view v_quarter_progress as
@@ -166,11 +225,9 @@ from kpi_quarter k
 left join v_quarter_progress p
   on p.employee_id = k.employee_id and p.nam = k.nam and p.quy = k.quy;
 
--- Điểm KPI quý theo đúng cơ cấu trọng số (Tài chính 10% + Quy trình 70% + KH nội bộ 15% + Học hỏi&PT 5%).
 -- ⚠️ NGƯỠNG XẾP LOẠI DƯỚI ĐÂY LÀ ƯỚC LƯỢNG — chỉ có 1 ví dụ thực tế đối chiếu được
 -- (94.9 điểm → "Hoàn thành tốt" trong file ANHNTN13). CẦN đối chiếu lại đúng
--- ngưỡng chính thức trong Phụ lục KPI-CNH-QLNB gốc của BIDV trước khi dùng thật,
--- rồi sửa trực tiếp trong CASE WHEN bên dưới.
+-- ngưỡng chính thức trong Phụ lục KPI-CNH-QLNB gốc của BIDV trước khi dùng thật.
 create or replace view v_kpi_quarter_score as
 select
   q.*,
@@ -193,7 +250,6 @@ select
   , 1) as tong_diem_kpi_quy
 from v_kpi_quarter q;
 
--- Màn Ban Giám đốc: tổng hợp hàng ngày theo phòng.
 create or replace view v_daily_department_summary as
 select
   d.id                                          as department_id,
@@ -208,27 +264,44 @@ left join daily_log l on l.employee_id = e.id and l.ngay_hoan_thanh_thuc_te = cu
 group by d.id, d.ten_phong;
 
 -- ============================================================================
--- HÀM PHỤ TRỢ (security definer) — tránh đệ quy RLS khi 1 policy cần tra cứu
--- lại chính bảng employees (ai đang đăng nhập, vai trò gì, quản lý ai).
+-- PHIÊN ĐĂNG NHẬP — hàm phụ trợ đọc "ai đang gọi" từ token, thay cho auth.uid().
+-- Mọi RPC nghiệp vụ khác (thêm sau, khi dựng từng màn) đều bắt đầu bằng
+-- perform set_config('app.employee_id', session_employee_id(p_token)::text, true);
+-- rồi mới gọi các hàm my_role()/is_manager_of() bên dưới — y hệt cách dùng
+-- auth.uid() kiểu cũ, chỉ đổi nguồn.
 -- ============================================================================
 
+create or replace function session_employee_id(p_token uuid) returns uuid
+language plpgsql stable security definer set search_path = public as $$
+declare
+  v_employee_id uuid;
+begin
+  select employee_id into v_employee_id from login_sessions
+  where token = p_token and not revoked and expires_at > now();
+  if v_employee_id is null then
+    raise exception 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn — vui lòng đăng nhập lại.';
+  end if;
+  return v_employee_id;
+end;
+$$;
+
 create or replace function my_employee_id() returns uuid
-language sql stable security definer set search_path = public as $$
-  select id from employees where auth_user_id = auth.uid();
+language sql stable as $$
+  select nullif(current_setting('app.employee_id', true), '')::uuid;
 $$;
 
 create or replace function my_role() returns text
 language sql stable security definer set search_path = public as $$
-  select app_role from employees where auth_user_id = auth.uid();
+  select app_role from employees where id = my_employee_id();
 $$;
 
 create or replace function my_department_id() returns uuid
 language sql stable security definer set search_path = public as $$
-  select department_id from employees where auth_user_id = auth.uid();
+  select department_id from employees where id = my_employee_id();
 $$;
 
--- true nếu người đang đăng nhập là quản lý trực tiếp CỦA target, hoặc là
--- Trưởng phòng của cùng phòng ban với target.
+-- true nếu người đang đăng nhập (my_employee_id()) là quản lý trực tiếp CỦA
+-- target, hoặc là Trưởng phòng của cùng phòng ban với target.
 create or replace function is_manager_of(target_employee_id uuid) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
@@ -242,96 +315,91 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- ============================================================================
--- ROW LEVEL SECURITY
+-- RPC: ĐĂNG NHẬP / ĐỔI MẬT KHẨU / ĐĂNG XUẤT — 3 hàm duy nhất được mở cho
+-- người CHƯA đăng nhập (anon), vì phải gọi được trước khi có token.
 -- ============================================================================
 
-alter table departments enable row level security;
-alter table employees enable row level security;
-alter table job_catalog enable row level security;
-alter table daily_log enable row level security;
-alter table kpi_quarter enable row level security;
-alter table satisfaction_survey enable row level security;
+create or replace function login(p_ma_cbnv text, p_mat_khau text) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  v_employee employees;
+  v_account  accounts;
+  v_token    uuid;
+begin
+  select * into v_employee from employees where ma_cbnv = trim(p_ma_cbnv) and active;
+  if v_employee.id is null then
+    raise exception 'Sai mã CBNV hoặc mật khẩu.';
+  end if;
 
--- DEPARTMENTS: mọi người đã đăng nhập đều xem được danh sách phòng (cần cho
--- màn Ban Giám đốc và cho combobox chọn phòng khi tạo cán bộ mới).
-create policy departments_select on departments for select
-  using (auth.role() = 'authenticated');
+  select * into v_account from accounts where employee_id = v_employee.id;
+  if v_account.id is null then
+    raise exception 'Tài khoản chưa được tạo — liên hệ Trưởng phòng.';
+  end if;
 
--- EMPLOYEES
-create policy employees_select on employees for select
-  using (
-    auth_user_id = auth.uid()
-    or is_manager_of(id)
-    or my_role() = 'ban_giam_doc'
+  if v_account.locked_until is not null and v_account.locked_until > now() then
+    raise exception 'Tài khoản tạm khoá do nhập sai nhiều lần — thử lại sau %.',
+      to_char(v_account.locked_until, 'HH24:MI DD/MM');
+  end if;
+
+  if v_account.mat_khau_hash <> crypt(p_mat_khau, v_account.mat_khau_hash) then
+    update accounts set
+      failed_attempts = failed_attempts + 1,
+      locked_until = case when failed_attempts + 1 >= 5 then now() + interval '15 minutes' else locked_until end
+    where id = v_account.id;
+    raise exception 'Sai mã CBNV hoặc mật khẩu.';
+  end if;
+
+  update accounts set failed_attempts = 0, locked_until = null, updated_at = now() where id = v_account.id;
+
+  insert into login_sessions (employee_id) values (v_employee.id) returning token into v_token;
+
+  return json_build_object(
+    'token', v_token,
+    'employee_id', v_employee.id,
+    'ma_cbnv', v_employee.ma_cbnv,
+    'ho_ten', v_employee.ho_ten,
+    'app_role', v_employee.app_role,
+    'department_id', v_employee.department_id,
+    'must_change_password', v_account.must_change_password
   );
+end;
+$$;
 
-create policy employees_update_self_password_flag on employees for update
-  using (auth_user_id = auth.uid())
-  with check (auth_user_id = auth.uid());
+create or replace function doi_mat_khau(p_token uuid, p_mat_khau_cu text, p_mat_khau_moi text) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  v_employee_id uuid := session_employee_id(p_token);
+  v_hash text;
+begin
+  select mat_khau_hash into v_hash from accounts where employee_id = v_employee_id;
+  if v_hash <> crypt(p_mat_khau_cu, v_hash) then
+    raise exception 'Mật khẩu hiện tại không đúng.';
+  end if;
+  if length(p_mat_khau_moi) < 6 then
+    raise exception 'Mật khẩu mới phải có ít nhất 6 ký tự.';
+  end if;
+  update accounts set
+    mat_khau_hash = crypt(p_mat_khau_moi, gen_salt('bf')),
+    must_change_password = false,
+    updated_at = now()
+  where employee_id = v_employee_id;
+end;
+$$;
 
--- JOB_CATALOG
-create policy job_catalog_select on job_catalog for select
-  using (
-    employee_id = my_employee_id()
-    or is_manager_of(employee_id)
-    or my_role() = 'ban_giam_doc'
-  );
+create or replace function logout(p_token uuid) returns void
+language sql security definer set search_path = public as $$
+  update login_sessions set revoked = true where token = p_token;
+$$;
 
-create policy job_catalog_write on job_catalog for all
-  using (my_role() in ('truong_phong','pho_truong_phong'))
-  with check (my_role() in ('truong_phong','pho_truong_phong'));
-
--- DAILY_LOG
-create policy daily_log_select on daily_log for select
-  using (
-    employee_id = my_employee_id()
-    or is_manager_of(employee_id)
-    or my_role() = 'ban_giam_doc'
-  );
-
--- Cán bộ tự tích việc của mình; lãnh đạo có thể ghi hộ cấp dưới.
-create policy daily_log_insert on daily_log for insert
-  with check (
-    employee_id = my_employee_id()
-    or is_manager_of(employee_id)
-  );
-
--- Sửa/ghi bù: chủ nhật ký hoặc quản lý trực tiếp — trigger bên dưới còn chặn
--- thêm nếu quý đã bị Trưởng phòng khoá.
-create policy daily_log_update on daily_log for update
-  using (employee_id = my_employee_id() or is_manager_of(employee_id))
-  with check (employee_id = my_employee_id() or is_manager_of(employee_id));
-
-create policy daily_log_delete on daily_log for delete
-  using (employee_id = my_employee_id() or is_manager_of(employee_id));
-
--- KPI_QUARTER
-create policy kpi_quarter_select on kpi_quarter for select
-  using (
-    employee_id = my_employee_id()
-    or is_manager_of(employee_id)
-    or my_role() = 'ban_giam_doc'
-  );
-
-create policy kpi_quarter_write on kpi_quarter for all
-  using (is_manager_of(employee_id) or my_role() = 'truong_phong')
-  with check (is_manager_of(employee_id) or my_role() = 'truong_phong');
-
--- SATISFACTION_SURVEY
-create policy satisfaction_select on satisfaction_survey for select
-  using (
-    employee_id = my_employee_id()
-    or is_manager_of(employee_id)
-    or my_role() = 'ban_giam_doc'
-  );
-
-create policy satisfaction_write on satisfaction_survey for all
-  using (is_manager_of(employee_id) or my_role() = 'truong_phong')
-  with check (is_manager_of(employee_id) or my_role() = 'truong_phong');
+grant execute on function login(text, text) to anon;
+grant execute on function doi_mat_khau(uuid, text, text) to anon;
+grant execute on function logout(uuid) to anon;
 
 -- ============================================================================
 -- TRIGGER: chặn sửa/ghi bù nhật ký của một quý đã bị Trưởng phòng khoá, và
--- chặn người không phải Trưởng phòng tự đổi is_locked.
+-- chặn người không phải Trưởng phòng tự đổi is_locked. Đọc "ai đang thao tác"
+-- qua my_role()/my_employee_id() ở trên — các RPC ghi dữ liệu (thêm ở bước
+-- dựng từng màn) phải set_config('app.employee_id', ...) trước khi INSERT/UPDATE.
 -- ============================================================================
 
 create or replace function fn_check_quarter_lock() returns trigger
