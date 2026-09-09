@@ -140,6 +140,10 @@ function catalogHtml(item) {
             <input type="checkbox" class="chk-finish-now" /> Kết thúc luôn (xong hôm nay)
           </label>
         </div>
+        <div class="quick-dates">
+          <label class="qty-inline">Bắt đầu <input type="date" class="chk-ngay-bat-dau" value="${todayStr()}" max="${todayStr()}" /></label>
+          <label class="qty-inline">Hạn <input type="date" class="chk-ngay-den-han" value="${todayStr()}" /></label>
+        </div>
       </div>
     </div>
   `;
@@ -194,6 +198,8 @@ function wireCatalogTaps(body) {
         el.classList.remove('staged');
         el.querySelector('.chk-so-luong').value = 1;
         el.querySelector('.chk-finish-now').checked = false;
+        el.querySelector('.chk-ngay-bat-dau').value = todayStr();
+        el.querySelector('.chk-ngay-den-han').value = todayStr();
       } else {
         staged.starts.add(jobId);
         el.classList.add('staged');
@@ -201,8 +207,10 @@ function wireCatalogTaps(body) {
       refreshSaveBarFromDom(el);
     });
 
-    // Bấm vào ô Số lượng không được làm toggle cả dòng.
+    // Bấm vào ô Số lượng/Ngày không được làm toggle cả dòng.
     el.querySelector('.chk-so-luong').addEventListener('click', (e) => e.stopPropagation());
+    el.querySelector('.chk-ngay-bat-dau').addEventListener('click', (e) => e.stopPropagation());
+    el.querySelector('.chk-ngay-den-han').addEventListener('click', (e) => e.stopPropagation());
 
     // Tích "Kết thúc luôn" tự tích luôn cả Bắt đầu (không cần bấm dòng trước) —
     // Ngày bắt đầu luôn = hôm nay cho trường hợp này (mặc định của start_task).
@@ -370,15 +378,21 @@ async function saveChanges(app, onLogout) {
     catch (err) { errors.push(err.message); }
   }
 
-  // 4) Bắt đầu các việc mới được tích trong danh mục (Ngày bắt đầu = hôm nay,
-  // Số lượng đọc trực tiếp từ ô nhập trên dòng) — nếu có tích "Kết thúc luôn"
-  // thì kết thúc ngay sau đó.
+  // 4) Bắt đầu các việc mới được tích trong danh mục — Số lượng/Ngày bắt
+  // đầu/Ngày đến hạn đọc trực tiếp từ các ô nhập ngay trên dòng (đã hiện ra
+  // từ lúc tích, không phải đợi sau khi lưu mới sửa được) — nếu có tích
+  // "Kết thúc luôn" thì kết thúc ngay sau đó.
   for (const jobId of staged.starts) {
     const row = body.querySelector(`.task[data-job-id="${jobId}"]`);
     const soLuong = parseInt(row?.querySelector('.chk-so-luong')?.value, 10) || 1;
+    const ngayBatDau = row?.querySelector('.chk-ngay-bat-dau')?.value || today;
+    const ngayDenHan = row?.querySelector('.chk-ngay-den-han')?.value || today;
     const finishNow = row?.querySelector('.chk-finish-now')?.checked || false;
     try {
-      const res = await callAuthedRpc('start_task', { p_job_catalog_id: jobId, p_so_luong: soLuong });
+      const res = await callAuthedRpc('start_task', {
+        p_job_catalog_id: jobId, p_so_luong: soLuong,
+        p_ngay_bat_dau: ngayBatDau, p_ngay_den_han: ngayDenHan,
+      });
       if (finishNow) {
         await callAuthedRpc('finish_task', { p_daily_log_id: res.daily_log_id, p_ngay_ket_thuc: today });
       }
