@@ -257,7 +257,7 @@ function wireInProgressCards(body) {
     });
     card.querySelector('.ip-ngay-bat-dau').addEventListener('change', () => refreshSaveBarFromDom(card));
     card.querySelector('.ip-ngay-den-han').addEventListener('change', (e) => {
-      card.className = `in-progress-card ${dueColor(e.target.value)}${staged.cancel.has(logId) ? ' staged-cancel' : ''}${staged.finish.has(logId) ? ' staged-finish' : ''}`;
+      card.className = `in-progress-card ${dueColor(e.target.value)}${staged.cancel.has(logId) ? ' staged-cancel' : ''}`;
       refreshSaveBarFromDom(card);
     });
 
@@ -269,7 +269,6 @@ function wireInProgressCards(body) {
         staged.cancel.add(logId);
         staged.finish.delete(logId);
         btnFinish.classList.remove('active');
-        card.classList.remove('staged-finish');
         card.classList.add('staged-cancel');
       }
       btnCancel.classList.toggle('active', staged.cancel.has(logId));
@@ -279,13 +278,11 @@ function wireInProgressCards(body) {
     btnFinish.addEventListener('click', () => {
       if (staged.finish.has(logId)) {
         staged.finish.delete(logId);
-        card.classList.remove('staged-finish');
       } else {
         staged.finish.add(logId);
         staged.cancel.delete(logId);
         btnCancel.classList.remove('active');
         card.classList.remove('staged-cancel');
-        card.classList.add('staged-finish');
       }
       btnFinish.classList.toggle('active', staged.finish.has(logId));
       refreshSaveBarFromDom(card);
