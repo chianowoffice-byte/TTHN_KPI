@@ -192,6 +192,8 @@ function wireCatalogTaps(body) {
       if (staged.starts.has(jobId)) {
         staged.starts.delete(jobId);
         el.classList.remove('staged');
+        el.querySelector('.chk-so-luong').value = 1;
+        el.querySelector('.chk-finish-now').checked = false;
       } else {
         staged.starts.add(jobId);
         el.classList.add('staged');
