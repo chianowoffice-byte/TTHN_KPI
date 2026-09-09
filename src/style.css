@@ -134,6 +134,48 @@ button, input { font-family: inherit; }
 
 .empty-msg { text-align: center; color: var(--ink-faint); font-size: 13.5px; padding: 24px 12px; }
 
+/* ---------- Thẻ "Đang thực hiện" (vòng đời Bắt đầu/Kết thúc) ---------- */
+.in-progress-card {
+  background: var(--surface); border: 1.6px solid var(--border); border-left-width: 5px;
+  border-radius: 12px; padding: 11px 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.in-progress-card.due-green { border-left-color: var(--accent); }
+.in-progress-card.due-yellow { border-left-color: var(--warn); background: var(--warn-soft); }
+.in-progress-card.due-red { border-left-color: var(--danger); background: var(--danger-soft); }
+.ip-title { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.35; }
+.ip-code { font-size: 11px; color: var(--ink-faint); }
+.ip-fields { display: flex; gap: 8px; flex-wrap: wrap; }
+.ip-fields label { display: flex; flex-direction: column; gap: 3px; font-size: 10.5px; color: var(--ink-faint); flex: 1; min-width: 90px; }
+.ip-fields input {
+  border: 1.2px solid var(--border); border-radius: 8px; padding: 6px 7px; font-size: 12.5px;
+  background: var(--surface); color: var(--ink); width: 100%;
+}
+.ip-fields input[type="number"] { min-width: 0; }
+.ip-total { font-size: 12px; color: var(--ink-dim); }
+.ip-actions { display: flex; gap: 8px; }
+.btn-small {
+  flex: 1; border: 1px solid var(--border); border-radius: 9px; padding: 8px; font-size: 12.5px;
+  font-weight: 600; cursor: pointer; background: var(--surface-2); color: var(--ink-dim);
+}
+.ip-actions .btn-finish { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn-small.active.btn-finish { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft) inset; }
+.btn-small.active.btn-cancel { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+.in-progress-card.staged-finish { box-shadow: 0 0 0 2px var(--accent) inset; }
+.in-progress-card.staged-cancel { opacity: 0.55; }
+.in-progress-card.staged-cancel .ip-fields, .in-progress-card.staged-cancel .ip-total { text-decoration: line-through; }
+
+/* Việc trong danh mục được tích để Bắt đầu (chờ Lưu) */
+.task.staged { box-shadow: 0 0 0 2px var(--accent) inset; background: var(--accent-soft); }
+.task.staged .box { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.task.staged .box svg { opacity: 1; transform: scale(1); }
+.finish-now-toggle { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; color: var(--ink-dim); }
+.finish-now-toggle input { margin: 0; }
+
+/* Việc đã kết thúc hôm nay, tích để bỏ Kết thúc (chờ Lưu) */
+.task.done.staged-unfinish { box-shadow: 0 0 0 2px var(--warn) inset; background: var(--warn-soft); }
+.task.done.staged-unfinish .box { background: var(--warn); border-color: var(--warn); }
+
 .hint-banner {
   background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px;
   font-size: 12.5px; line-height: 1.45;
