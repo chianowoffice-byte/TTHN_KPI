@@ -320,7 +320,8 @@ $$;
 -- ============================================================================
 
 create or replace function login(p_ma_cbnv text, p_mat_khau text) returns json
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, extensions as $$
+-- 'extensions' cần có trong search_path vì Supabase cài pgcrypto (crypt/gen_salt) ở đó, không phải 'public'.
 declare
   v_employee employees;
   v_account  accounts;
@@ -366,7 +367,7 @@ end;
 $$;
 
 create or replace function doi_mat_khau(p_token uuid, p_mat_khau_cu text, p_mat_khau_moi text) returns void
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_employee_id uuid := session_employee_id(p_token);
   v_hash text;
