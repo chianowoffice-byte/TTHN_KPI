@@ -26,73 +26,82 @@ export async function renderToday(app, onLogout) {
     onLogout();
   });
 
+  await loadAndRender(app, ngay, onLogout);
+}
+
+async function loadAndRender(app, ngay, onLogout) {
+  const body = app.querySelector('#today-body');
   let items = [];
   try {
     const data = await callAuthedRpc('get_today_screen', { p_ngay: ngay });
-    items = data.items || [];
+    items = (data.items || []).map((i) => ({ ...i, localDone: i.done }));
   } catch (err) {
-    app.querySelector('#today-body').innerHTML = `<div class="error-msg">${esc(err.message)}</div>`;
+    body.innerHTML = `<div class="error-msg">${esc(err.message)}</div>`;
     if (err.message === 'Chưa đăng nhập.') onLogout();
     return;
   }
-
-  renderList(app, items, ngay, onLogout);
+  renderShell(app, items, ngay, onLogout);
 }
 
-function renderList(app, items, ngay, onLogout) {
+function renderShell(app, items, ngay, onLogout) {
   const body = app.querySelector('#today-body');
-
-  const doneCount = items.filter((i) => i.done).length;
-  const doneValue = items.filter((i) => i.done).reduce((sum, i) => sum + Number(i.gia_tri_cv), 0);
-  const totalValue = items.reduce((sum, i) => sum + Number(i.gia_tri_cv), 0);
 
   const hangNgay = items.filter((i) => /ngày/i.test(i.dinh_ky_tan_suat || ''));
   const khac = items.filter((i) => !/ngày/i.test(i.dinh_ky_tan_suat || ''));
 
   body.innerHTML = `
-    <div class="ring-row">
-      <div>
-        <div class="ring-num">${doneCount}/${items.length} việc đã tích hôm nay</div>
-        <div class="ring-label">Giá trị đã hoàn thành: <span class="mono">${fmtDiem(doneValue)}</span>/${fmtDiem(totalValue)}đ</div>
+    <div class="fixed-controls">
+      <div class="ring-row">
+        <div>
+          <div class="ring-num" id="ring-count"></div>
+          <div class="ring-label" id="ring-label"></div>
+        </div>
+      </div>
+      <div class="search-box">
+        ${iconSearch}
+        <input id="task-search" type="text" placeholder="Tìm việc theo tên hoặc mã…" />
       </div>
     </div>
 
-    <div class="search-box">
-      ${iconSearch}
-      <input id="task-search" type="text" placeholder="Tìm việc theo tên hoặc mã…" />
+    <div class="list-scroll" id="list-scroll">
+      ${items.length === 0 ? `
+        <div class="empty-msg">Chưa có việc nào trong danh mục — liên hệ Trưởng/Phó phòng để bổ sung.</div>
+      ` : `
+        ${hangNgay.length ? `<div class="group-label">Việc hàng ngày</div>${hangNgay.map(taskHtml).join('')}` : ''}
+        ${khac.length ? `<div class="group-label">Việc khác — tìm để tích khi phát sinh</div>${khac.map(taskHtml).join('')}` : ''}
+      `}
     </div>
 
-    ${items.length === 0 ? `
-      <div class="empty-msg">Chưa có việc nào trong danh mục — liên hệ Trưởng/Phó phòng để bổ sung.</div>
-    ` : `
-      ${hangNgay.length ? `<div class="group-label">Việc hàng ngày</div>${hangNgay.map(taskHtml).join('')}` : ''}
-      ${khac.length ? `<div class="group-label">Việc khác — tìm để tích khi phát sinh</div>${khac.map(taskHtml).join('')}` : ''}
-    `}
+    <div class="save-bar" id="save-bar" hidden>
+      <button class="btn-primary" id="btn-save">Lưu thay đổi</button>
+    </div>
   `;
 
   const searchInput = body.querySelector('#task-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      const q = searchInput.value.trim().toLowerCase();
-      body.querySelectorAll('.task').forEach((el) => {
-        const hay = (el.dataset.search || '');
-        el.style.display = !q || hay.includes(q) ? '' : 'none';
-      });
-      body.querySelectorAll('.group-label').forEach((el) => {
-        el.style.display = q ? 'none' : '';
-      });
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    body.querySelectorAll('.task').forEach((el) => {
+      const hay = el.dataset.search || '';
+      el.style.display = !q || hay.includes(q) ? '' : 'none';
     });
-  }
+    body.querySelectorAll('.group-label').forEach((el) => {
+      el.style.display = q ? 'none' : '';
+    });
+  });
 
   body.querySelectorAll('.task').forEach((el) => {
-    el.addEventListener('click', () => onToggle(el, app, ngay, onLogout));
+    const item = items.find((i) => i.job_catalog_id === el.dataset.id);
+    el.addEventListener('click', () => toggleLocal(el, item, items, app, ngay, onLogout));
   });
+
+  updateSummary(items, body);
+  updateSaveBar(items, app, ngay, onLogout);
 }
 
 function taskHtml(item) {
   const search = `${item.ten_cong_viec} ${item.ma_cv}`.toLowerCase();
   return `
-    <div class="task ${item.done ? 'done' : ''}" data-id="${item.job_catalog_id}" data-search="${esc(search)}">
+    <div class="task ${item.localDone ? 'done' : ''}" data-id="${item.job_catalog_id}" data-search="${esc(search)}">
       <div class="box">${iconCheck}</div>
       <div class="t">
         <div class="title">${esc(item.ten_cong_viec)}</div>
@@ -107,20 +116,57 @@ function taskHtml(item) {
   `;
 }
 
-async function onToggle(el, app, ngay, onLogout) {
-  if (el.classList.contains('pending')) return;
-  el.classList.add('pending');
-  const jobCatalogId = el.dataset.id;
+function toggleLocal(el, item, items, app, ngay, onLogout) {
+  item.localDone = !item.localDone;
+  el.classList.toggle('done', item.localDone);
+  const body = app.querySelector('#today-body');
+  updateSummary(items, body);
+  updateSaveBar(items, app, ngay, onLogout);
+}
 
-  try {
-    await callAuthedRpc('toggle_today_task', { p_job_catalog_id: jobCatalogId, p_ngay: ngay });
-    // Tải lại toàn bộ danh sách để đồng bộ số đếm/tổng giá trị — đơn giản và
-    // đủ nhanh với ~50-150 việc/người; có thể tối ưu cập nhật tại chỗ sau.
-    const data = await callAuthedRpc('get_today_screen', { p_ngay: ngay });
-    renderList(app, data.items || [], ngay, onLogout);
-  } catch (err) {
-    el.classList.remove('pending');
-    if (err.message === 'Chưa đăng nhập.') { onLogout(); return; }
-    alert(err.message);
+function updateSummary(items, body) {
+  const doneItems = items.filter((i) => i.localDone);
+  const doneValue = doneItems.reduce((sum, i) => sum + Number(i.gia_tri_cv), 0);
+  const totalValue = items.reduce((sum, i) => sum + Number(i.gia_tri_cv), 0);
+  body.querySelector('#ring-count').textContent = `${doneItems.length}/${items.length} việc đã tích hôm nay`;
+  body.querySelector('#ring-label').innerHTML =
+    `Giá trị đã hoàn thành: <span class="mono">${fmtDiem(doneValue)}</span>/${fmtDiem(totalValue)}đ`;
+}
+
+function updateSaveBar(items, app, ngay, onLogout) {
+  const saveBar = app.querySelector('#save-bar');
+  const dirty = items.filter((i) => i.localDone !== i.done);
+
+  if (dirty.length === 0) {
+    saveBar.hidden = true;
+    return;
   }
+  saveBar.hidden = false;
+  const btn = saveBar.querySelector('#btn-save');
+  btn.textContent = `Lưu ${dirty.length} thay đổi`;
+  btn.onclick = () => saveChanges(dirty, items, app, ngay, onLogout);
+}
+
+async function saveChanges(dirty, items, app, ngay, onLogout) {
+  const btn = app.querySelector('#btn-save');
+  btn.disabled = true;
+  btn.textContent = 'Đang lưu…';
+
+  const results = await Promise.allSettled(
+    dirty.map((item) => callAuthedRpc('toggle_today_task', { p_job_catalog_id: item.job_catalog_id, p_ngay: ngay }))
+  );
+
+  const failed = results
+    .map((r, idx) => (r.status === 'rejected' ? { item: dirty[idx], reason: r.reason } : null))
+    .filter(Boolean);
+
+  if (failed.length > 0) {
+    const first = failed[0].reason;
+    alert(`Lưu được ${dirty.length - failed.length}/${dirty.length} thay đổi. Lỗi: ${first.message || first}`);
+    if (first.message === 'Chưa đăng nhập.') { onLogout(); return; }
+  }
+
+  // Tải lại toàn bộ để đồng bộ đúng trạng thái thật trên server (kể cả phần
+  // đã lưu thành công lẫn phần lỗi), rồi dựng lại danh sách từ đầu.
+  await loadAndRender(app, ngay, onLogout);
 }
