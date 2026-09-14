@@ -37,7 +37,11 @@ export async function login(maCBNV, matKhau) {
 export async function logout() {
   const session = getSession();
   if (session?.token) {
-    await supabase.rpc('logout', { p_token: session.token }).catch(() => {});
+    try {
+      await supabase.rpc('logout', { p_token: session.token });
+    } catch {
+      // Phiên hết hạn hoặc lỗi mạng — vẫn xoá phiên cục bộ để đăng xuất được.
+    }
   }
   clearSession();
 }
