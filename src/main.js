@@ -6,6 +6,7 @@ import { renderOverview } from './overviewScreen.js';
 
 const app = document.getElementById('app');
 let currentScreen = 'today';
+let screenBeforePassword = 'today';
 
 function route() {
   const session = getSession();
@@ -13,7 +14,12 @@ function route() {
     currentScreen = 'today';
     renderLogin(app, route);
   } else if (session.must_change_password) {
-    renderChangePassword(app, route);
+    renderChangePassword(app, route); // bắt buộc, không có nút Huỷ
+  } else if (currentScreen === 'password') {
+    renderChangePassword(app, () => goto(screenBeforePassword), {
+      mandatory: false,
+      onCancel: () => goto(screenBeforePassword),
+    });
   } else if (currentScreen === 'review') {
     renderReview(app, route, goto);
   } else if (currentScreen === 'overview') {
@@ -24,6 +30,7 @@ function route() {
 }
 
 function goto(screen) {
+  if (screen === 'password') screenBeforePassword = currentScreen;
   currentScreen = screen;
   route();
 }

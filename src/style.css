@@ -39,18 +39,27 @@ button, input { font-family: inherit; }
 
 .topbar {
   flex: none;
-  padding: 16px 16px 12px;
+  padding: 12px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  display: flex; flex-direction: column; gap: 10px;
 }
+.topbar-row1 { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .topbar .who { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .topbar .who .name { font-size: 11.5px; color: var(--ink-faint); }
 .topbar .who h1 { font-size: 17px; font-weight: 700; margin: 0; }
-.nav-tabs { display: flex; gap: 4px; background: var(--surface-2); border-radius: 10px; padding: 3px; flex: none; }
+.topbar-actions { display: flex; gap: 8px; flex: none; }
+
+.icon-btn {
+  flex: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+  width: 36px; height: 36px; display: grid; place-items: center; color: var(--ink-dim); cursor: pointer;
+}
+.icon-btn svg { width: 17px; height: 17px; }
+
+.nav-tabs { display: flex; gap: 4px; background: var(--surface-2); border-radius: 10px; padding: 3px; overflow-x: auto; }
 .nav-tab {
   display: flex; align-items: center; gap: 5px; border: none; background: none; border-radius: 8px;
-  padding: 6px 9px; font-size: 11.5px; font-weight: 600; color: var(--ink-faint); cursor: pointer; white-space: nowrap;
+  padding: 7px 10px; font-size: 12px; font-weight: 600; color: var(--ink-faint); cursor: pointer; white-space: nowrap; flex: none;
 }
 .nav-tab svg { width: 14px; height: 14px; }
 .nav-tab.active { background: var(--surface); color: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
@@ -58,12 +67,6 @@ button, input { font-family: inherit; }
   background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; border-radius: 99px;
   padding: 1px 5px; min-width: 15px; text-align: center; display: inline-block;
 }
-
-.topbar .logout-btn {
-  flex: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
-  width: 36px; height: 36px; display: grid; place-items: center; color: var(--ink-dim); cursor: pointer;
-}
-.topbar .logout-btn svg { width: 17px; height: 17px; }
 
 .body { flex: 1; min-height: 0; padding: 14px 14px 0; display: flex; flex-direction: column; gap: 10px; }
 
@@ -87,6 +90,11 @@ button, input { font-family: inherit; }
 }
 .btn-primary:disabled { opacity: 0.55; cursor: default; }
 .btn-primary:active:not(:disabled) { transform: translateY(1px); }
+
+.btn-secondary {
+  background: none; color: var(--ink-dim); border: none; padding: 10px;
+  font-size: 13.5px; font-weight: 600; cursor: pointer; width: 100%; text-align: center;
+}
 
 .error-msg {
   background: var(--danger-soft); color: var(--danger); border-radius: 10px; padding: 10px 12px;
