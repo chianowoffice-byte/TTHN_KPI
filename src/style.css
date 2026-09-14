@@ -214,6 +214,31 @@ button, input { font-family: inherit; }
 }
 .btn-small.active.btn-approve { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
+/* ---------- Tổng quan (Trưởng phòng) ---------- */
+.month-switch { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 2px 0; }
+.month-switch .btn-small { flex: none; width: 34px; padding: 6px 0; font-size: 16px; }
+.month-label { font-size: 14px; font-weight: 700; color: var(--ink); min-width: 100px; text-align: center; }
+
+.ov-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ov-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 11px 12px; }
+.ov-tile-wide { grid-column: 1 / -1; }
+.ov-tile-v { font-variant-numeric: tabular-nums; font-size: 19px; font-weight: 700; color: var(--ink); }
+.ov-tile-l { font-size: 11px; color: var(--ink-faint); margin-top: 2px; }
+
+.ov-section-title { font-size: 12.5px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.ov-legend { display: flex; gap: 14px; justify-content: center; margin-top: 6px; }
+.ov-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-dim); }
+.ov-swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+.ov-can-bo-list { display: flex; flex-direction: column; gap: 12px; }
+.ov-cb-row { display: flex; flex-direction: column; gap: 4px; }
+.ov-cb-name { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.ov-cb-code { font-weight: 400; color: var(--ink-faint); font-size: 11px; }
+.ov-cb-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface-3); }
+.ov-cb-seg { height: 100%; }
+.ov-cb-empty { width: 100%; }
+.ov-cb-nums { font-size: 10.5px; color: var(--ink-faint); }
+
 .hint-banner {
   background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px;
   font-size: 12.5px; line-height: 1.45;
