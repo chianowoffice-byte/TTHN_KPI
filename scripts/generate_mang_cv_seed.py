@@ -23,13 +23,17 @@ def esc(v):
     return "'" + s.replace("'", "''") + "'"
 
 def esc_num(v):
+    # Luôn ép kiểu ::numeric rõ ràng — nếu để NULL trần, Postgres suy luận kiểu
+    # cột trong VALUES (...) theo dòng đầu tiên; cột nào toàn NULL/phần lớn NULL
+    # dễ bị suy ra kiểu 'text' rồi báo lỗi "is of type numeric but expression
+    # is of type text" khi insert vào cột numeric thật.
     if v is None:
-        return "NULL"
+        return "NULL::numeric"
     try:
         f = float(v)
     except (TypeError, ValueError):
-        return "NULL"
-    return str(round(f, 2))
+        return "NULL::numeric"
+    return f"{round(f, 2)}::numeric"
 
 def main(path):
     wb = openpyxl.load_workbook(path, data_only=True)
