@@ -47,6 +47,18 @@ button, input { font-family: inherit; }
 .topbar .who { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .topbar .who .name { font-size: 11.5px; color: var(--ink-faint); }
 .topbar .who h1 { font-size: 17px; font-weight: 700; margin: 0; }
+.nav-tabs { display: flex; gap: 4px; background: var(--surface-2); border-radius: 10px; padding: 3px; flex: none; }
+.nav-tab {
+  display: flex; align-items: center; gap: 5px; border: none; background: none; border-radius: 8px;
+  padding: 6px 9px; font-size: 11.5px; font-weight: 600; color: var(--ink-faint); cursor: pointer; white-space: nowrap;
+}
+.nav-tab svg { width: 14px; height: 14px; }
+.nav-tab.active { background: var(--surface); color: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.nav-badge {
+  background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; border-radius: 99px;
+  padding: 1px 5px; min-width: 15px; text-align: center; display: inline-block;
+}
+
 .topbar .logout-btn {
   flex: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
   width: 36px; height: 36px; display: grid; place-items: center; color: var(--ink-dim); cursor: pointer;
@@ -194,6 +206,13 @@ button, input { font-family: inherit; }
 /* Việc đã kết thúc hôm nay, tích để bỏ Kết thúc (chờ Lưu) */
 .task.done.staged-unfinish { box-shadow: 0 0 0 2px var(--warn) inset; background: var(--warn-soft); }
 .task.done.staged-unfinish .box { background: var(--warn); border-color: var(--warn); }
+
+/* ---------- Duyệt điểm ---------- */
+.review-card {
+  background: var(--surface); border: 1.6px solid var(--border); border-radius: 12px;
+  padding: 11px 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.btn-small.active.btn-approve { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
 .hint-banner {
   background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px;

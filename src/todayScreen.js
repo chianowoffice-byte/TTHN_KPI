@@ -1,6 +1,7 @@
-import { getSession, logout, callAuthedRpc } from './auth.js';
+import { getSession, callAuthedRpc } from './auth.js';
 import { esc, fmtDiem, todayStr } from './utils.js';
-import { iconCheck, iconSearch, iconLogout } from './icons.js';
+import { iconCheck, iconSearch } from './icons.js';
+import { topbarHtml, wireTopbar, canReview } from './nav.js';
 
 // Toàn bộ thao tác (Bắt đầu / sửa Số lượng-Ngày / Kết thúc / Huỷ / Bỏ Kết
 // thúc) chỉ tác động lên state cục bộ dưới đây — không gọi RPC cho tới khi
@@ -15,28 +16,26 @@ function resetStaged() {
   };
 }
 
-export async function renderToday(app, onLogout) {
+export async function renderToday(app, onLogout, onGoto) {
   const session = getSession();
+  let pendingCount = 0;
+  if (canReview(session)) {
+    try {
+      const data = await callAuthedRpc('get_pending_reviews', {});
+      pendingCount = (data.items || []).length;
+    } catch { /* không chặn màn Hôm nay nếu đếm lỗi */ }
+  }
 
   app.innerHTML = `
     <div class="screen">
-      <div class="topbar">
-        <div class="who">
-          <span class="name">${esc(session.ma_cbnv)}</span>
-          <h1>${esc(session.ho_ten)}</h1>
-        </div>
-        <button class="logout-btn" id="btn-logout" title="Đăng xuất">${iconLogout}</button>
-      </div>
+      ${topbarHtml(session, 'today', pendingCount)}
       <div class="body" id="today-body">
         <div class="empty-msg">Đang tải danh mục công việc…</div>
       </div>
     </div>
   `;
 
-  app.querySelector('#btn-logout').addEventListener('click', async () => {
-    await logout();
-    onLogout();
-  });
+  wireTopbar(app, onLogout, onGoto);
 
   await loadAndRender(app, onLogout);
 }
