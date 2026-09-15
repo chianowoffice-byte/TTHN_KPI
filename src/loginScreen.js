@@ -12,7 +12,7 @@ export function renderLogin(app, onDone) {
         <div id="login-error"></div>
         <div class="field">
           <label for="ma-cbnv">Mã CBNV</label>
-          <input id="ma-cbnv" type="text" inputmode="numeric" autocomplete="username" placeholder="Ví dụ: 00146999" required />
+          <input id="ma-cbnv" type="text" inputmode="numeric" autocomplete="username" placeholder="Ví dụ: 146999" required />
         </div>
         <div class="field">
           <label for="mat-khau">Mật khẩu</label>
