@@ -5,16 +5,16 @@ import { weekChartSvg } from './chart.js';
 
 let state = { nam: null, thang: null };
 
-export async function renderOverview(app, onLogout, onGoto) {
+export async function renderMyStats(app, onLogout, onGoto) {
   const session = getSession();
   const now = new Date();
   if (!state.nam) { state.nam = now.getFullYear(); state.thang = now.getMonth() + 1; }
 
   app.innerHTML = `
     <div class="screen">
-      ${topbarHtml(session, 'overview')}
-      <div class="body" id="overview-body">
-        <div class="empty-msg">Đang tải tổng quan…</div>
+      ${topbarHtml(session, 'mystats')}
+      <div class="body" id="mystats-body">
+        <div class="empty-msg">Đang tải thống kê…</div>
       </div>
     </div>
   `;
@@ -24,10 +24,10 @@ export async function renderOverview(app, onLogout, onGoto) {
 }
 
 async function loadAndRender(app, onLogout, onGoto) {
-  const body = app.querySelector('#overview-body');
+  const body = app.querySelector('#mystats-body');
   let data;
   try {
-    data = await callAuthedRpc('get_month_overview', { p_nam: state.nam, p_thang: state.thang });
+    data = await callAuthedRpc('get_my_month_overview', { p_nam: state.nam, p_thang: state.thang });
   } catch (err) {
     body.innerHTML = `<div class="error-msg">${esc(err.message)}</div>`;
     if (err.message === 'Chưa đăng nhập.') onLogout();
@@ -37,7 +37,7 @@ async function loadAndRender(app, onLogout, onGoto) {
 }
 
 function render(app, data, onLogout, onGoto) {
-  const body = app.querySelector('#overview-body');
+  const body = app.querySelector('#mystats-body');
   const pctDungHan = data.tong_viec > 0 ? Math.round((data.dung_han / data.tong_viec) * 100) : null;
 
   body.innerHTML = `
@@ -79,13 +79,6 @@ function render(app, data, onLogout, onGoto) {
           <span class="ov-legend-item"><span class="ov-swatch" style="background:var(--danger)"></span>Quá hạn</span>
         </div>
       </div>
-
-      <div class="card">
-        <div class="ov-section-title">Theo cán bộ</div>
-        <div class="ov-can-bo-list">
-          ${data.theo_can_bo.map(canBoRow).join('')}
-        </div>
-      </div>
     `}
   `;
 
@@ -97,24 +90,6 @@ function changeMonth(app, onLogout, onGoto, delta) {
   state.thang += delta;
   if (state.thang < 1) { state.thang = 12; state.nam -= 1; }
   if (state.thang > 12) { state.thang = 1; state.nam += 1; }
-  app.querySelector('#overview-body').innerHTML = `<div class="empty-msg">Đang tải tổng quan…</div>`;
+  app.querySelector('#mystats-body').innerHTML = `<div class="empty-msg">Đang tải thống kê…</div>`;
   loadAndRender(app, onLogout, onGoto);
-}
-
-function canBoRow(cb) {
-  const total = cb.dung_han + cb.qua_han;
-  const pctDung = total > 0 ? (cb.dung_han / total) * 100 : 0;
-  const pctQua = total > 0 ? (cb.qua_han / total) * 100 : 0;
-  return `
-    <div class="ov-cb-row">
-      <div class="ov-cb-name">${esc(cb.ho_ten)} <span class="ov-cb-code">${esc(cb.ma_cbnv)}</span></div>
-      <div class="ov-cb-bar">
-        ${total === 0 ? `<div class="ov-cb-empty"></div>` : `
-          <div class="ov-cb-seg" style="width:${pctDung}%; background:var(--accent)"></div>
-          <div class="ov-cb-seg" style="width:${pctQua}%; background:var(--danger)"></div>
-        `}
-      </div>
-      <div class="ov-cb-nums">${cb.so_viec} việc · <span style="color:var(--accent)">${cb.dung_han} đúng hạn</span> · <span style="color:var(--danger)">${cb.qua_han} quá hạn</span> · ${fmtDiem(cb.gia_tri)}đ</div>
-    </div>
-  `;
 }

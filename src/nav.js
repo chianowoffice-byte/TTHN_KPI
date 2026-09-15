@@ -1,8 +1,8 @@
 import { esc } from './utils.js';
-import { iconLogout, iconToday, iconClipboard, iconChart, iconKey } from './icons.js';
+import { iconLogout, iconToday, iconClipboard, iconChart, iconKey, iconStats } from './icons.js';
 
 // Phó/Trưởng phòng có thêm màn "Duyệt điểm"; riêng Trưởng phòng có thêm
-// "Tổng quan" toàn phòng theo tháng.
+// "Tổng quan" toàn phòng theo tháng. "Thống kê" (cá nhân) thì ai cũng có.
 const REVIEW_ROLES = ['pho_truong_phong', 'truong_phong'];
 
 export function canReview(session) {
@@ -15,21 +15,19 @@ export function canViewOverview(session) {
 /** Vẽ thanh đầu trang dùng chung — 2 dòng để nút Đổi mật khẩu/Đăng xuất
  *  luôn thấy được trên điện thoại dù có bao nhiêu tab:
  *   Dòng 1: mã CBNV + tên .......... [Đổi mật khẩu] [Đăng xuất]
- *   Dòng 2 (nếu có tab): các tab chuyển màn, cuộn ngang nếu cần.
- *  `current` là 'today' | 'review' | 'overview'. */
+ *   Dòng 2: các tab chuyển màn, cuộn ngang nếu cần.
+ *  `current` là 'today' | 'review' | 'overview' | 'mystats'. */
 export function topbarHtml(session, current, pendingCount) {
-  const hasExtraTabs = canReview(session) || canViewOverview(session);
   const tabs = [];
-  if (hasExtraTabs) {
-    tabs.push(`<button type="button" class="nav-tab ${current === 'today' ? 'active' : ''}" data-goto="today">${iconToday} Hôm nay</button>`);
-    if (canReview(session)) {
-      tabs.push(`<button type="button" class="nav-tab ${current === 'review' ? 'active' : ''}" data-goto="review">
-        ${iconClipboard} Duyệt điểm${pendingCount ? ` <span class="nav-badge">${pendingCount}</span>` : ''}
-      </button>`);
-    }
-    if (canViewOverview(session)) {
-      tabs.push(`<button type="button" class="nav-tab ${current === 'overview' ? 'active' : ''}" data-goto="overview">${iconChart} Tổng quan</button>`);
-    }
+  tabs.push(`<button type="button" class="nav-tab ${current === 'today' ? 'active' : ''}" data-goto="today">${iconToday} Hôm nay</button>`);
+  if (canReview(session)) {
+    tabs.push(`<button type="button" class="nav-tab ${current === 'review' ? 'active' : ''}" data-goto="review">
+      ${iconClipboard} Duyệt điểm${pendingCount ? ` <span class="nav-badge">${pendingCount}</span>` : ''}
+    </button>`);
+  }
+  tabs.push(`<button type="button" class="nav-tab ${current === 'mystats' ? 'active' : ''}" data-goto="mystats">${iconStats} Thống kê</button>`);
+  if (canViewOverview(session)) {
+    tabs.push(`<button type="button" class="nav-tab ${current === 'overview' ? 'active' : ''}" data-goto="overview">${iconChart} Tổng quan</button>`);
   }
 
   return `
@@ -44,7 +42,7 @@ export function topbarHtml(session, current, pendingCount) {
           <button class="icon-btn" id="btn-logout" title="Đăng xuất">${iconLogout}</button>
         </div>
       </div>
-      ${tabs.length ? `<div class="nav-tabs">${tabs.join('')}</div>` : ''}
+      <div class="nav-tabs">${tabs.join('')}</div>
     </div>
   `;
 }

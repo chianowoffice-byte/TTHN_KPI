@@ -14,3 +14,5 @@ export const iconToday = `<svg viewBox="0 0 20 20" fill="none" stroke="currentCo
 export const iconChart = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V9M9.5 16V4M15 16v-6"/></svg>`;
 
 export const iconKey = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="13" r="3.2"/><path d="M9.3 10.7L16 4M13 7l2 2M16 4l2 2"/></svg>`;
+
+export const iconStats = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="M10 5.5V10l3 2"/></svg>`;
