@@ -52,6 +52,7 @@ function renderShell(app, items, onLogout, onGoto) {
           <div class="ring-num">${items.length} việc chờ duyệt</div>
           <div class="ring-label">Điểm mặc định đã tính sẵn theo đúng/trễ hạn — chỉ sửa khi cần</div>
         </div>
+        ${items.length > 1 ? `<button type="button" class="btn-small" id="btn-select-all" style="flex:none; margin-left:auto;">Chọn tất cả</button>` : ''}
       </div>
     </div>
 
@@ -65,6 +66,17 @@ function renderShell(app, items, onLogout, onGoto) {
   `;
 
   wireReviewItems(body, app, onLogout, onGoto);
+
+  body.querySelector('#btn-select-all')?.addEventListener('click', () => {
+    body.querySelectorAll('.review-card .btn-approve').forEach((btn) => {
+      const pid = btn.closest('.review-card').dataset.participantId;
+      if (!staged.approve.has(pid)) {
+        staged.approve.add(pid);
+        btn.classList.add('active');
+      }
+    });
+    updateSaveBar(app, onLogout, onGoto);
+  });
 }
 
 const CAP_CO_DIEM = ['kiem_soat', 'truong_phong']; // PGĐ/GĐ chỉ phê duyệt, không chấm điểm

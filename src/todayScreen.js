@@ -81,12 +81,14 @@ function renderShell(app, data, onLogout) {
   const catalog = data.catalog || [];
 
   const doneToday = catalog.filter((i) => i.done_today);
-  const notStarted = catalog.filter((i) => !i.done_today);
-  const hangNgay = notStarted.filter((i) => /ngày/i.test(i.dinh_ky_tan_suat || ''));
-  const khac = notStarted.filter((i) => !/ngày/i.test(i.dinh_ky_tan_suat || ''));
+  // Việc đã kết thúc hôm nay VẪN hiện trong danh mục chính để tích làm lại
+  // (làm phát sinh thêm cùng việc đó trong ngày) — không loại ra nữa. Số
+  // lượng nhập thêm sẽ tự gộp vào lượt đã có nếu trùng Ngày bắt đầu/Kết thúc.
+  const hangNgay = catalog.filter((i) => /ngày/i.test(i.dinh_ky_tan_suat || ''));
+  const khac = catalog.filter((i) => !/ngày/i.test(i.dinh_ky_tan_suat || ''));
 
-  const nhomList = [...new Set(notStarted.map((i) => i.nhom_nv).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
-  const freqList = FREQ_ORDER.filter((f) => notStarted.some((i) => freqBucket(i.dinh_ky_tan_suat) === f));
+  const nhomList = [...new Set(catalog.map((i) => i.nhom_nv).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+  const freqList = FREQ_ORDER.filter((f) => catalog.some((i) => freqBucket(i.dinh_ky_tan_suat) === f));
 
   body.innerHTML = `
     <div class="fixed-controls">
@@ -115,7 +117,7 @@ function renderShell(app, data, onLogout) {
     <div class="list-scroll" id="list-scroll">
       ${inProgress.length ? `<div class="group-label">Đang thực hiện</div>${inProgress.map(inProgressHtml).join('')}` : ''}
       ${doneToday.length ? `<div class="group-label">Đã kết thúc hôm nay</div>${doneToday.map(doneTodayHtml).join('')}` : ''}
-      ${notStarted.length === 0 && inProgress.length === 0 && doneToday.length === 0 ? `
+      ${catalog.length === 0 && inProgress.length === 0 ? `
         <div class="empty-msg">Chưa có việc nào trong danh mục — liên hệ Trưởng/Phó phòng để bổ sung.</div>
       ` : ''}
       ${hangNgay.length ? `<div class="group-label" data-group="hang-ngay">Việc hàng ngày</div>${hangNgay.map(catalogHtml).join('')}` : ''}
@@ -195,6 +197,12 @@ function catalogHtml(item) {
           <span class="val">${fmtDiem(item.gia_tri_cv)}đ</span>
           <span class="freq">${esc(item.dinh_ky_tan_suat || '')}</span>
         </div>
+        ${item.done_today ? `
+        <div class="done-today-badge">
+          Đã làm hôm nay: SL ${item.finished_so_luong} · ${fmtDiem(item.finished_gia_tri_tong)}đ
+          ${item.finished_ghi_chu ? ` · “${esc(item.finished_ghi_chu)}”` : ''}
+          — tích lại để làm thêm, sẽ tự cộng dồn số lượng.
+        </div>` : ''}
         <div class="quick-finish-row">
           <label class="qty-inline">SL <input type="number" min="1" class="chk-so-luong" value="1" /></label>
           <label class="finish-now-toggle">
@@ -204,6 +212,7 @@ function catalogHtml(item) {
         <div class="quick-dates">
           <label class="qty-inline">Bắt đầu <input type="date" class="chk-ngay-bat-dau" value="${todayStr()}" max="${todayStr()}" /></label>
           <label class="qty-inline">Hạn <input type="date" class="chk-ngay-den-han" value="${todayStr()}" /></label>
+          <label class="qty-inline note-inline">Ghi chú <textarea class="chk-ghi-chu" rows="2" placeholder="Mô tả thêm (tuỳ chọn)"></textarea></label>
         </div>
       </div>
     </div>
@@ -222,6 +231,7 @@ function doneTodayHtml(item) {
           <span class="val">SL ${item.finished_so_luong} · ${fmtDiem(item.finished_gia_tri_tong)}đ</span>
           ${item.finished_is_ghi_bu ? `<span class="freq" style="color:var(--warn)">Ghi bù</span>` : ''}
         </div>
+        ${item.finished_ghi_chu ? `<div class="note-preview">${esc(item.finished_ghi_chu)}</div>` : ''}
       </div>
     </div>
   `;
@@ -237,6 +247,7 @@ function inProgressHtml(item) {
         <label>Bắt đầu <input type="date" class="ip-ngay-bat-dau" value="${item.ngay_bat_dau}" data-orig="${item.ngay_bat_dau}" max="${todayStr()}" /></label>
         <label>Hạn <input type="date" class="ip-ngay-den-han" value="${item.ngay_den_han}" data-orig="${item.ngay_den_han}" /></label>
       </div>
+      <label class="note-inline">Ghi chú <textarea class="ip-ghi-chu" rows="2" placeholder="Mô tả thêm (tuỳ chọn)" data-orig="${esc(item.ghi_chu || '')}">${esc(item.ghi_chu || '')}</textarea></label>
       <div class="ip-total">Tổng: <span class="mono ip-gia-tri-tong">${fmtDiem(item.gia_tri_tong)}</span>đ</div>
       <div class="ip-actions">
         <button class="btn-small btn-cancel" type="button">Huỷ bắt đầu</button>
@@ -261,6 +272,7 @@ function wireCatalogTaps(body) {
         el.querySelector('.chk-finish-now').checked = false;
         el.querySelector('.chk-ngay-bat-dau').value = todayStr();
         el.querySelector('.chk-ngay-den-han').value = todayStr();
+        el.querySelector('.chk-ghi-chu').value = '';
       } else {
         staged.starts.add(jobId);
         el.classList.add('staged');
@@ -272,6 +284,7 @@ function wireCatalogTaps(body) {
     el.querySelector('.chk-so-luong').addEventListener('click', (e) => e.stopPropagation());
     el.querySelector('.chk-ngay-bat-dau').addEventListener('click', (e) => e.stopPropagation());
     el.querySelector('.chk-ngay-den-han').addEventListener('click', (e) => e.stopPropagation());
+    el.querySelector('.chk-ghi-chu').addEventListener('click', (e) => e.stopPropagation());
 
     // Tích "Kết thúc luôn" tự tích luôn cả Bắt đầu (không cần bấm dòng trước) —
     // Ngày bắt đầu luôn = hôm nay cho trường hợp này (mặc định của start_task).
@@ -317,6 +330,7 @@ function wireInProgressCards(body) {
       refreshSaveBarFromDom(card);
     });
     card.querySelector('.ip-ngay-bat-dau').addEventListener('change', () => refreshSaveBarFromDom(card));
+    card.querySelector('.ip-ghi-chu').addEventListener('input', () => refreshSaveBarFromDom(card));
     card.querySelector('.ip-ngay-den-han').addEventListener('change', (e) => {
       card.className = `in-progress-card ${dueColor(e.target.value)}${staged.cancel.has(logId) ? ' staged-cancel' : ''}`;
       refreshSaveBarFromDom(card);
@@ -352,7 +366,7 @@ function wireInProgressCards(body) {
 }
 
 function inProgressCardEdited(card) {
-  return ['.ip-so-luong', '.ip-ngay-bat-dau', '.ip-ngay-den-han'].some((sel) => {
+  return ['.ip-so-luong', '.ip-ngay-bat-dau', '.ip-ngay-den-han', '.ip-ghi-chu'].some((sel) => {
     const input = card.querySelector(sel);
     return input.value !== input.dataset.orig;
   });
@@ -422,6 +436,7 @@ async function saveChanges(app, onLogout) {
           p_so_luong: parseInt(card.querySelector('.ip-so-luong').value, 10) || 1,
           p_ngay_bat_dau: card.querySelector('.ip-ngay-bat-dau').value,
           p_ngay_den_han: card.querySelector('.ip-ngay-den-han').value,
+          p_ghi_chu: card.querySelector('.ip-ghi-chu').value,
         });
       }
       if (staged.finish.has(logId)) {
@@ -445,11 +460,12 @@ async function saveChanges(app, onLogout) {
     const soLuong = parseInt(row?.querySelector('.chk-so-luong')?.value, 10) || 1;
     const ngayBatDau = row?.querySelector('.chk-ngay-bat-dau')?.value || today;
     const ngayDenHan = row?.querySelector('.chk-ngay-den-han')?.value || today;
+    const ghiChu = row?.querySelector('.chk-ghi-chu')?.value || '';
     const finishNow = row?.querySelector('.chk-finish-now')?.checked || false;
     try {
       const res = await callAuthedRpc('start_task', {
         p_job_catalog_id: jobId, p_so_luong: soLuong,
-        p_ngay_bat_dau: ngayBatDau, p_ngay_den_han: ngayDenHan,
+        p_ngay_bat_dau: ngayBatDau, p_ngay_den_han: ngayDenHan, p_ghi_chu: ghiChu,
       });
       if (finishNow) {
         await callAuthedRpc('finish_task', { p_daily_log_id: res.daily_log_id, p_ngay_ket_thuc: today });
