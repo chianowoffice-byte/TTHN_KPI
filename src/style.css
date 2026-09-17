@@ -218,6 +218,11 @@ button, input { font-family: inherit; }
   padding: 6px 8px; margin-top: 7px; line-height: 1.4;
 }
 
+.in-progress-badge {
+  font-size: 11px; color: var(--warn); background: var(--warn-soft); border-radius: 8px;
+  padding: 6px 8px; margin-top: 7px; line-height: 1.4;
+}
+
 .note-inline { display: flex; flex-direction: column; gap: 3px; font-size: 10.5px; color: var(--ink-faint); flex: 1 1 100%; }
 .note-inline textarea, .quick-dates textarea {
   border: 1.2px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 12.5px;

@@ -203,6 +203,11 @@ function catalogHtml(item) {
           ${item.finished_ghi_chu ? ` · “${esc(item.finished_ghi_chu)}”` : ''}
           — tích lại để làm thêm, sẽ tự cộng dồn số lượng.
         </div>` : ''}
+        ${item.in_progress_count > 0 ? `
+        <div class="in-progress-badge">
+          Đang thực hiện: ${item.in_progress_count} lượt · tổng SL ${item.in_progress_so_luong}
+          — xem/sửa ở mục “Đang thực hiện” phía trên, hoặc tích thêm để bắt đầu 1 lượt mới song song.
+        </div>` : ''}
         <div class="quick-finish-row">
           <label class="qty-inline">SL <input type="number" min="1" class="chk-so-luong" value="1" /></label>
           <label class="finish-now-toggle">
