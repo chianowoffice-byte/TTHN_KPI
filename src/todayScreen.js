@@ -252,6 +252,7 @@ function inProgressHtml(item) {
         <label>Bắt đầu <input type="date" class="ip-ngay-bat-dau" value="${item.ngay_bat_dau}" data-orig="${item.ngay_bat_dau}" max="${todayStr()}" /></label>
         <label>Hạn <input type="date" class="ip-ngay-den-han" value="${item.ngay_den_han}" data-orig="${item.ngay_den_han}" /></label>
       </div>
+      <label class="note-inline gia-han-reason" hidden>Lý do gia hạn <textarea class="ip-ly-do-gia-han" rows="2" placeholder="Bắt buộc — vì sao cần kéo dài Hạn?"></textarea></label>
       <label class="note-inline">Ghi chú <textarea class="ip-ghi-chu" rows="2" placeholder="Mô tả thêm (tuỳ chọn)" data-orig="${esc(item.ghi_chu || '')}">${esc(item.ghi_chu || '')}</textarea></label>
       <div class="ip-total">Tổng: <span class="mono ip-gia-tri-tong">${fmtDiem(item.gia_tri_tong)}</span>đ</div>
       <div class="ip-actions">
@@ -336,8 +337,11 @@ function wireInProgressCards(body) {
     });
     card.querySelector('.ip-ngay-bat-dau').addEventListener('change', () => refreshSaveBarFromDom(card));
     card.querySelector('.ip-ghi-chu').addEventListener('input', () => refreshSaveBarFromDom(card));
-    card.querySelector('.ip-ngay-den-han').addEventListener('change', (e) => {
+    const hanInput = card.querySelector('.ip-ngay-den-han');
+    const reasonLabel = card.querySelector('.gia-han-reason');
+    hanInput.addEventListener('change', (e) => {
       card.className = `in-progress-card ${dueColor(e.target.value)}${staged.cancel.has(logId) ? ' staged-cancel' : ''}`;
+      reasonLabel.hidden = !(e.target.value > hanInput.dataset.orig);
       refreshSaveBarFromDom(card);
     });
 
@@ -436,12 +440,20 @@ async function saveChanges(app, onLogout) {
     if (staged.cancel.has(logId)) continue;
     try {
       if (inProgressCardEdited(card)) {
+        const hanInput = card.querySelector('.ip-ngay-den-han');
+        const dangGiaHan = hanInput.value > hanInput.dataset.orig;
+        const lyDoGiaHan = card.querySelector('.ip-ly-do-gia-han').value.trim();
+        if (dangGiaHan && !lyDoGiaHan) {
+          errors.push(`"${card.querySelector('.ip-title').textContent}": cần nhập Lý do gia hạn.`);
+          continue;
+        }
         await callAuthedRpc('update_task_progress', {
           p_daily_log_id: logId,
           p_so_luong: parseInt(card.querySelector('.ip-so-luong').value, 10) || 1,
           p_ngay_bat_dau: card.querySelector('.ip-ngay-bat-dau').value,
-          p_ngay_den_han: card.querySelector('.ip-ngay-den-han').value,
+          p_ngay_den_han: hanInput.value,
           p_ghi_chu: card.querySelector('.ip-ghi-chu').value,
+          p_ly_do_gia_han: dangGiaHan ? lyDoGiaHan : null,
         });
       }
       if (staged.finish.has(logId)) {

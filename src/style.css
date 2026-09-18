@@ -224,6 +224,7 @@ button, input { font-family: inherit; }
 }
 
 .note-inline { display: flex; flex-direction: column; gap: 3px; font-size: 10.5px; color: var(--ink-faint); flex: 1 1 100%; }
+.note-inline[hidden] { display: none; }
 .note-inline textarea, .quick-dates textarea {
   border: 1.2px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 12.5px;
   background: var(--surface); color: var(--ink); resize: vertical; font-family: inherit; width: 100%;

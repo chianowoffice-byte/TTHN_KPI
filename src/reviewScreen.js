@@ -99,8 +99,13 @@ function reviewItemHtml(item) {
       <div class="review-detail" hidden>
         <div class="note-preview">Bắt đầu: ${esc(item.ngay_bat_dau)}${item.is_ghi_bu ? ' · <span style="color:var(--warn)">Ghi bù</span>' : ''}</div>
         <div class="note-preview">${item.ghi_chu ? `Ghi chú: “${esc(item.ghi_chu)}”` : 'Không có ghi chú.'}</div>
+        ${(item.lich_su_gia_han || []).length > 0 ? `
+        <div class="note-preview" style="color:var(--warn); font-weight:600; font-style:normal;">Đã gia hạn ${item.lich_su_gia_han.length} lần:</div>
+        ${item.lich_su_gia_han.map((g) => `
+        <div class="note-preview">• ${esc(g.han_cu)} → ${esc(g.han_moi)}: “${esc(g.ly_do)}”</div>
+        `).join('')}` : ''}
       </div>
-      <button type="button" class="btn-link btn-toggle-detail">Xem chi tiết</button>
+      <button type="button" class="btn-link btn-toggle-detail">Xem chi tiết${(item.lich_su_gia_han || []).length > 0 ? ` (đã gia hạn ${item.lich_su_gia_han.length} lần)` : ''}</button>
       ${coDiem ? `
       <div class="ip-fields">
         <label>Điểm Tiến độ <input type="number" step="0.1" min="0" max="${item.diem_toi_da}" class="rv-tien-do" value="${item.diem_tien_do ?? item.diem_toi_da}" /></label>
