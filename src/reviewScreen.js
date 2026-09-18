@@ -88,7 +88,7 @@ function reviewItemHtml(item) {
     : `<span class="freq" style="color:var(--accent)">Đúng hạn</span>`;
   return `
     <div class="review-card" data-participant-id="${item.participant_id}" data-max="${item.diem_toi_da}" data-co-diem="${coDiem}">
-      <div class="ip-title">${esc(item.ten_cong_viec)}</div>
+      <div class="ip-title expandable">${esc(item.ten_cong_viec)}</div>
       <div class="ip-code">
         ${esc(item.ma_cv)} · Cấp ${esc(CAP_LABEL[item.cap] || item.cap)}${coDiem ? ` · Tối đa ${fmtDiem(item.diem_toi_da)}đ` : ' · Chỉ phê duyệt, không chấm điểm'}
       </div>
@@ -96,6 +96,11 @@ function reviewItemHtml(item) {
         Người làm: ${esc(item.nguoi_thuc_hien)} (${esc(item.ma_cbnv_thuc_hien)}) · SL ${item.so_luong}
         · Xong ${esc(item.ngay_ket_thuc_thuc_te)} / Hạn ${esc(item.ngay_den_han)} ${lateBadge}
       </div>
+      <div class="review-detail" hidden>
+        <div class="note-preview">Bắt đầu: ${esc(item.ngay_bat_dau)}${item.is_ghi_bu ? ' · <span style="color:var(--warn)">Ghi bù</span>' : ''}</div>
+        <div class="note-preview">${item.ghi_chu ? `Ghi chú: “${esc(item.ghi_chu)}”` : 'Không có ghi chú.'}</div>
+      </div>
+      <button type="button" class="btn-link btn-toggle-detail">Xem chi tiết</button>
       ${coDiem ? `
       <div class="ip-fields">
         <label>Điểm Tiến độ <input type="number" step="0.1" min="0" max="${item.diem_toi_da}" class="rv-tien-do" value="${item.diem_tien_do ?? item.diem_toi_da}" /></label>
@@ -126,6 +131,11 @@ function wireReviewItems(body, app, onLogout, onGoto) {
     ['.rv-tien-do', '.rv-chat-luong'].forEach((sel) => {
       card.querySelector(sel)?.addEventListener('input', () => updateSaveBar(app, onLogout, onGoto));
     });
+
+    const detail = card.querySelector('.review-detail');
+    const toggleDetail = () => { detail.hidden = !detail.hidden; };
+    card.querySelector('.ip-title')?.addEventListener('click', toggleDetail);
+    card.querySelector('.btn-toggle-detail')?.addEventListener('click', toggleDetail);
   });
 }
 
