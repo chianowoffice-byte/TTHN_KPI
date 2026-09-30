@@ -211,6 +211,7 @@ button, input { font-family: inherit; }
 .quick-dates input[type="date"] {
   border: 1.2px solid var(--border); border-radius: 7px; padding: 3px 6px;
   font-size: 12px; background: var(--surface); color: var(--ink);
+  width: 132px;
 }
 
 .done-today-badge {
