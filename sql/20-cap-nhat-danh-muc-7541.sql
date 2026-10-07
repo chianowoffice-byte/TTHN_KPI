@@ -12,11 +12,9 @@
 --   * Thêm cột tần suất (job_catalog.tan_suat) -> bộ lọc "Tần suất" ở màn Hôm nay
 --     dùng lại được (trước đây danh mục chuẩn không có cột này).
 --   * Phân công mảng cho cán bộ theo đúng sheet "Cán bộ".
--- Chạy trong 1 giao dịch: lỗi ở đâu thì huỷ toàn bộ, không để dở dang.
+-- Phần thay đổi dữ liệu nằm trong 1 khối DO (1 giao dịch): lỗi ở đâu thì huỷ toàn bộ, không để dở dang.
 -- Mã việc mới = <tiền tố>-<số thứ tự 3 chữ số theo thứ tự trong file>, vd KHTH-001.
 -- ============================================================================
-
-begin;
 
 alter table job_catalog add column if not exists tan_suat text;
 
@@ -32,9 +30,12 @@ insert into mang_cv (ma_mang, ten_mang) values
   (8, 'KHÁC')
 on conflict (ma_mang) do update set ten_mang = excluded.ten_mang;
 
-create function pg_temp.norm_ten(s text) returns text language sql immutable as $$
+create or replace function public.tmp_norm_ten(s text) returns text language sql immutable as $fn$
   select btrim(lower(regexp_replace(regexp_replace(btrim(s), '^(2023-)?[A-Za-z]+\s*[0-9]+\s*-\s*', ''), '\s+', ' ', 'g')), ' .')
-$$;
+$fn$;
+
+do $do$
+begin
 
 -- 2) Danh sách việc mới (staging)
 create temp table _new_cv (seq int, prefix text, ten text, ma_mang int, diem_can_bo numeric(6,2), diem_kiem_soat numeric(6,2), tan_suat text, ma_cv text) on commit drop;
@@ -460,13 +461,13 @@ where x.seq = n.seq;
 
 -- 3) Ghép việc cũ <-> việc mới theo (mảng, tên chuẩn hoá, thứ tự xuất hiện nếu trùng tên)
 create temp table _old_cv on commit drop as
-select jc.id, jc.ma_cv as ma_cv_cu, mc.ma_mang, pg_temp.norm_ten(jc.ten_cong_viec) as k,
-       row_number() over (partition by mc.ma_mang, pg_temp.norm_ten(jc.ten_cong_viec) order by jc.ma_cv) as rn
+select jc.id, jc.ma_cv as ma_cv_cu, mc.ma_mang, public.tmp_norm_ten(jc.ten_cong_viec) as k,
+       row_number() over (partition by mc.ma_mang, public.tmp_norm_ten(jc.ten_cong_viec) order by jc.ma_cv) as rn
 from job_catalog jc join mang_cv mc on mc.id = jc.mang_cv_id;
 
 create temp table _new_k on commit drop as
-select seq, ma_mang, pg_temp.norm_ten(ten) as k,
-       row_number() over (partition by ma_mang, pg_temp.norm_ten(ten) order by seq) as rn
+select seq, ma_mang, public.tmp_norm_ten(ten) as k,
+       row_number() over (partition by ma_mang, public.tmp_norm_ten(ten) order by seq) as rn
 from _new_cv;
 
 create temp table _map on commit drop as
@@ -626,6 +627,9 @@ join employees e on e.ma_cbnv = c.ma_cbnv
 join mang_cv mc on mc.ma_mang = c.ma_mang
 on conflict (employee_id, mang_cv_id) do nothing;
 
+end
+$do$;
+
 -- 5) Màn Hôm nay: trả về tần suất thật (trước đây luôn NULL) để lọc theo Tần suất
 create or replace function get_today_screen(p_token uuid, p_ngay date default current_date) returns json
 language plpgsql security definer set search_path = public as $$
@@ -671,7 +675,7 @@ begin
 end;
 $$;
 
-commit;
+drop function if exists public.tmp_norm_ten(text);
 
 -- ============================================================================
 -- KIỂM TRA SAU KHI CHẠY (chỉ đọc). Mong đợi: viec_dang_dung = 414,
