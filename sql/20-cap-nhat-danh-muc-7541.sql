@@ -498,11 +498,13 @@ where n.seq not in (select seq from _map);
 
 -- 3c) Việc cũ không còn trong danh sách mới
 update job_catalog jc set active = false
-where jc.id not in (select old_id from _map)
+where jc.id in (select id from _old_cv)
+  and jc.id not in (select old_id from _map)
   and exists (select 1 from daily_log dl where dl.job_catalog_id = jc.id);
 
 delete from job_catalog jc
-where jc.id not in (select old_id from _map)
+where jc.id in (select id from _old_cv)
+  and jc.id not in (select old_id from _map)
   and not exists (select 1 from daily_log dl where dl.job_catalog_id = jc.id);
 
 -- 4) Phân công mảng cho cán bộ theo sheet "Cán bộ"
