@@ -70,9 +70,10 @@ function freqBucket(text) {
   if (t.includes('tháng')) return 'Hàng tháng';
   if (t.includes('quý')) return 'Hàng quý';
   if (t.includes('năm')) return 'Hàng năm';
+  if (t.includes('phát sinh') || t.includes('đột xuất') || t.includes('khi ')) return 'Khi phát sinh';
   return 'Khác';
 }
-const FREQ_ORDER = ['Hàng ngày', 'Hàng tuần', 'Hàng tháng', 'Hàng quý', 'Hàng năm', 'Khác'];
+const FREQ_ORDER = ['Hàng ngày', 'Hàng tuần', 'Hàng tháng', 'Hàng quý', 'Hàng năm', 'Khi phát sinh', 'Khác'];
 
 function renderShell(app, data, onLogout) {
   window.__qlnb_onLogout = onLogout;
