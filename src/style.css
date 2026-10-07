@@ -163,7 +163,8 @@ button, input { font-family: inherit; }
 .task.done .box svg { opacity: 1; transform: scale(1); }
 .task .t { flex: 1; min-width: 0; }
 .task .t .title { font-size: 13.5px; color: var(--ink); font-weight: 500; line-height: 1.35; }
-.task.done .t .title { color: var(--ink-dim); text-decoration: line-through; text-decoration-color: var(--ink-faint); }
+.task.done .t .title { color: var(--ink); }
+.done-pill { font-size: 10px; font-weight: 700; color: var(--accent); background: var(--surface); border-radius: 999px; padding: 1px 8px; }
 .task .t .meta { display: flex; gap: 8px; margin-top: 4px; align-items: center; flex-wrap: wrap; }
 .task .t .meta .code { font-size: 10.5px; color: var(--ink-faint); }
 .task .t .meta .val { font-size: 11px; color: var(--accent); font-weight: 600; }
@@ -253,6 +254,11 @@ button, input { font-family: inherit; }
 }
 .btn-small.active.btn-approve { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
 .review-card .ip-title.expandable { cursor: pointer; }
+.review-note {
+  background: var(--surface-2); border-radius: 8px; padding: 8px 10px; font-size: 12.5px;
+  color: var(--ink); white-space: pre-wrap; word-break: break-word; line-height: 1.45;
+}
+.review-note-label { display: block; font-size: 10px; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
 .review-detail:not([hidden]) { display: flex; flex-direction: column; gap: 2px; }
 .btn-link {
   align-self: flex-start; background: none; border: none; padding: 0;
@@ -288,3 +294,17 @@ button, input { font-family: inherit; }
   background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px;
   font-size: 12.5px; line-height: 1.45;
 }
+
+/* ---------- Báo cáo theo khoảng ngày ---------- */
+.report-controls { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; }
+.report-dates { display: flex; gap: 14px; flex-wrap: wrap; }
+.report-dates input[type="date"] {
+  border: 1.2px solid var(--border); border-radius: 7px; padding: 4px 6px;
+  font-size: 12.5px; background: var(--surface); color: var(--ink); width: 140px;
+}
+.report-row {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;
+}
+.report-points { font-size: 12px; color: var(--ink-dim); }
+.report-points b { color: var(--ink); }

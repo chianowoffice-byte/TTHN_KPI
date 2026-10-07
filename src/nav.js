@@ -1,5 +1,5 @@
 import { esc } from './utils.js';
-import { iconLogout, iconToday, iconClipboard, iconChart, iconKey, iconStats } from './icons.js';
+import { iconLogout, iconToday, iconClipboard, iconChart, iconKey, iconStats, iconReport } from './icons.js';
 
 // Phó/Trưởng phòng có thêm màn "Duyệt điểm"; riêng Trưởng phòng có thêm
 // "Tổng quan" toàn phòng theo tháng. "Thống kê" (cá nhân) thì ai cũng có.
@@ -16,7 +16,7 @@ export function canViewOverview(session) {
  *  luôn thấy được trên điện thoại dù có bao nhiêu tab:
  *   Dòng 1: mã CBNV + tên .......... [Đổi mật khẩu] [Đăng xuất]
  *   Dòng 2: các tab chuyển màn, cuộn ngang nếu cần.
- *  `current` là 'today' | 'review' | 'overview' | 'mystats'. */
+ *  `current` là 'today' | 'review' | 'report' | 'overview' | 'mystats'. */
 export function topbarHtml(session, current, pendingCount) {
   const tabs = [];
   tabs.push(`<button type="button" class="nav-tab ${current === 'today' ? 'active' : ''}" data-goto="today">${iconToday} Hôm nay</button>`);
@@ -25,6 +25,7 @@ export function topbarHtml(session, current, pendingCount) {
       ${iconClipboard} Duyệt điểm${pendingCount ? ` <span class="nav-badge">${pendingCount}</span>` : ''}
     </button>`);
   }
+  tabs.push(`<button type="button" class="nav-tab ${current === 'report' ? 'active' : ''}" data-goto="report">${iconReport} Báo cáo</button>`);
   tabs.push(`<button type="button" class="nav-tab ${current === 'mystats' ? 'active' : ''}" data-goto="mystats">${iconStats} Thống kê</button>`);
   if (canViewOverview(session)) {
     tabs.push(`<button type="button" class="nav-tab ${current === 'overview' ? 'active' : ''}" data-goto="overview">${iconChart} Tổng quan</button>`);

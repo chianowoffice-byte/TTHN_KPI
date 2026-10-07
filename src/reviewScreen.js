@@ -96,9 +96,11 @@ function reviewItemHtml(item) {
         Người làm: ${esc(item.nguoi_thuc_hien)} (${esc(item.ma_cbnv_thuc_hien)}) · SL ${item.so_luong}
         · Xong ${esc(item.ngay_ket_thuc_thuc_te)} / Hạn ${esc(item.ngay_den_han)} ${lateBadge}
       </div>
+      ${item.ghi_chu
+        ? `<div class="review-note"><span class="review-note-label">Ghi chú của cán bộ</span>${esc(item.ghi_chu)}</div>`
+        : `<div class="note-preview">Cán bộ không ghi chú.</div>`}
       <div class="review-detail" hidden>
         <div class="note-preview">Bắt đầu: ${esc(item.ngay_bat_dau)}${item.is_ghi_bu ? ' · <span style="color:var(--warn)">Ghi bù</span>' : ''}</div>
-        <div class="note-preview">${item.ghi_chu ? `Ghi chú: “${esc(item.ghi_chu)}”` : 'Không có ghi chú.'}</div>
         ${(item.lich_su_gia_han || []).length > 0 ? `
         <div class="note-preview" style="color:var(--warn); font-weight:600; font-style:normal;">Đã gia hạn ${item.lich_su_gia_han.length} lần:</div>
         ${item.lich_su_gia_han.map((g) => `

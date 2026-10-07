@@ -16,3 +16,5 @@ export const iconChart = `<svg viewBox="0 0 20 20" fill="none" stroke="currentCo
 export const iconKey = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="13" r="3.2"/><path d="M9.3 10.7L16 4M13 7l2 2M16 4l2 2"/></svg>`;
 
 export const iconStats = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="M10 5.5V10l3 2"/></svg>`;
+
+export const iconReport = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2.5h6l4 4v10a1 1 0 01-1 1H6a1 1 0 01-1-1v-13a1 1 0 011-1zM12 2.5v4h4M8 11h5M8 14h5"/></svg>`;

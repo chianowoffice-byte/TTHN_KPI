@@ -6,7 +6,7 @@ export function renderLogin(app, onDone) {
     <div class="login-wrap">
       <div class="brand">
         <div class="eyebrow">Phòng Quản lý nội bộ</div>
-        <h1>Sổ KPI QLNB</h1>
+        <h1>Sổ nhật ký KPI</h1>
       </div>
       <form id="login-form">
         <div id="login-error"></div>

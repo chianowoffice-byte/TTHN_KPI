@@ -69,6 +69,11 @@ function render(app, data, onLogout, onGoto) {
       <div class="ov-tile-v">${fmtDiem(data.tong_gia_tri)}đ</div>
       <div class="ov-tile-l">Tổng giá trị công việc hoàn thành trong tháng</div>
     </div>
+    ${data.diem_thuong > 0 ? `
+    <div class="ov-tile ov-tile-wide">
+      <div class="ov-tile-v" style="color:var(--accent)">+${fmtDiem(data.diem_thuong)}đ</div>
+      <div class="ov-tile-l">Điểm thưởng (công tác Đoàn thể)</div>
+    </div>` : ''}
 
     ${data.tong_viec === 0 ? `<div class="empty-msg">Chưa có việc nào kết thúc trong tháng này.</div>` : `
       <div class="card">

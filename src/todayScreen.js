@@ -85,8 +85,10 @@ function renderShell(app, data, onLogout) {
   // Việc đã kết thúc hôm nay VẪN hiện trong danh mục chính để tích làm lại
   // (làm phát sinh thêm cùng việc đó trong ngày) — không loại ra nữa. Số
   // lượng nhập thêm sẽ tự gộp vào lượt đã có nếu trùng Ngày bắt đầu/Kết thúc.
-  const hangNgay = catalog.filter((i) => /ngày/i.test(i.dinh_ky_tan_suat || ''));
-  const khac = catalog.filter((i) => !/ngày/i.test(i.dinh_ky_tan_suat || ''));
+  const diemThuong = catalog.filter((i) => i.la_diem_thuong);
+  const catalogKpi = catalog.filter((i) => !i.la_diem_thuong);
+  const hangNgay = catalogKpi.filter((i) => /ngày/i.test(i.dinh_ky_tan_suat || ''));
+  const khac = catalogKpi.filter((i) => !/ngày/i.test(i.dinh_ky_tan_suat || ''));
 
   const nhomList = [...new Set(catalog.map((i) => i.nhom_nv).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
   const freqList = FREQ_ORDER.filter((f) => catalog.some((i) => freqBucket(i.dinh_ky_tan_suat) === f));
@@ -123,6 +125,7 @@ function renderShell(app, data, onLogout) {
       ` : ''}
       ${hangNgay.length ? `<div class="group-label" data-group="hang-ngay">Việc hàng ngày</div>${hangNgay.map(catalogHtml).join('')}` : ''}
       ${khac.length ? `<div class="group-label" data-group="khac">Việc khác — tìm để bắt đầu khi phát sinh</div>${khac.map(catalogHtml).join('')}` : ''}
+      ${diemThuong.length ? `<div class="group-label" data-group="thuong">Điểm thưởng — công tác Đoàn thể</div>${diemThuong.map(catalogHtml).join('')}` : ''}
     </div>
 
     <div class="save-bar" id="save-bar" hidden>
@@ -234,6 +237,7 @@ function doneTodayHtml(item) {
         <div class="title">${esc(item.ten_cong_viec)}</div>
         <div class="meta">
           <span class="code">${esc(item.ma_cv)}</span>
+          <span class="done-pill">Đã xong</span>
           <span class="val">SL ${item.finished_so_luong} · ${fmtDiem(item.finished_gia_tri_tong)}đ</span>
           ${item.finished_is_ghi_bu ? `<span class="freq" style="color:var(--warn)">Ghi bù</span>` : ''}
         </div>

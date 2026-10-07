@@ -69,6 +69,11 @@ function render(app, data, onLogout, onGoto) {
       <div class="ov-tile-v">${fmtDiem(data.tong_gia_tri)}đ</div>
       <div class="ov-tile-l">Tổng giá trị công việc hoàn thành trong tháng</div>
     </div>
+    ${data.diem_thuong > 0 ? `
+    <div class="ov-tile ov-tile-wide">
+      <div class="ov-tile-v" style="color:var(--accent)">+${fmtDiem(data.diem_thuong)}đ</div>
+      <div class="ov-tile-l">Điểm thưởng (công tác Đoàn thể)</div>
+    </div>` : ''}
 
     ${data.tong_viec === 0 ? `<div class="empty-msg">Chưa có việc nào kết thúc trong tháng này.</div>` : `
       <div class="card">
@@ -114,7 +119,7 @@ function canBoRow(cb) {
           <div class="ov-cb-seg" style="width:${pctQua}%; background:var(--danger)"></div>
         `}
       </div>
-      <div class="ov-cb-nums">${cb.so_viec} việc · <span style="color:var(--accent)">${cb.dung_han} đúng hạn</span> · <span style="color:var(--danger)">${cb.qua_han} quá hạn</span> · ${fmtDiem(cb.gia_tri)}đ</div>
+      <div class="ov-cb-nums">${cb.so_viec} việc · <span style="color:var(--accent)">${cb.dung_han} đúng hạn</span> · <span style="color:var(--danger)">${cb.qua_han} quá hạn</span> · ${fmtDiem(cb.gia_tri)}đ${cb.diem_thuong > 0 ? ` · <span style="color:var(--accent)">+${fmtDiem(cb.diem_thuong)}đ thưởng</span>` : ''}</div>
     </div>
   `;
 }

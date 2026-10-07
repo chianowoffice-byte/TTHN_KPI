@@ -4,6 +4,7 @@ import { renderToday } from './todayScreen.js';
 import { renderReview } from './reviewScreen.js';
 import { renderOverview } from './overviewScreen.js';
 import { renderMyStats } from './myStatsScreen.js';
+import { renderReport } from './reportScreen.js';
 
 const app = document.getElementById('app');
 let currentScreen = 'today';
@@ -25,6 +26,8 @@ function route() {
     renderReview(app, route, goto);
   } else if (currentScreen === 'overview') {
     renderOverview(app, route, goto);
+  } else if (currentScreen === 'report') {
+    renderReport(app, route, goto);
   } else if (currentScreen === 'mystats') {
     renderMyStats(app, route, goto);
   } else {
