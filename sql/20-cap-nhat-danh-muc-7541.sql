@@ -474,8 +474,9 @@ create temp table _map on commit drop as
 select o.id as old_id, n.seq
 from _old_cv o join _new_k n on n.ma_mang = o.ma_mang and n.k = o.k and n.rn = o.rn;
 
--- Giải phóng toàn bộ mã cũ (ma_cv là UNIQUE) trước khi gán mã mới
-update job_catalog set ma_cv = 'CU-' || ma_cv where ma_cv not like 'CU-%';
+-- Giải phóng toàn bộ mã cũ (ma_cv là UNIQUE) trước khi gán mã mới; gắn 6 ký tự đầu của id để không bao giờ trùng
+-- (kể cả khi DB còn sót dòng mã CU-... từ lần chạy dở trước đó)
+update job_catalog set ma_cv = 'CU-' || ma_cv || '#' || left(id::text, 6) where ma_cv not like 'CU-%';
 
 -- 3a) Việc cũ còn dùng -> cập nhật tại chỗ, giữ nguyên id
 update job_catalog jc set
