@@ -5,7 +5,7 @@ export function renderLogin(app, onDone) {
   app.innerHTML = `
     <div class="login-wrap">
       <div class="brand">
-        <div class="eyebrow">Phòng Quản lý nội bộ</div>
+        <div class="eyebrow">BIDV Chi nhánh Tràng Tiền</div>
         <h1>Sổ nhật ký KPI</h1>
       </div>
       <form id="login-form">
